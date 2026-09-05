@@ -3,6 +3,9 @@ Standalone PyGame script for real-time Human Training.
 Run this instead of Streamlit for a 60 FPS driving experience!
 """
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import pygame
 from src.human.episode_manager import EpisodeManager
 

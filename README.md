@@ -124,8 +124,25 @@ STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
 ### Run the Streamlit app
 
+For the full dashboard (Data recording, Analytics, Training, Live Tracking):
 ```bash
 streamlit run app.py
+```
+
+### Run Native PyGame Modes (60 FPS)
+
+For a high-performance, real-time experience outside of Streamlit:
+
+**1. Drive Manually (Human Training)**
+```bash
+# Drive vehicle R using your physical arrow keys
+python scripts/play_human.py R
+```
+
+**2. Watch Autonomous Agents (Live Evaluation)**
+```bash
+# Watch the trained DQN agent (R) or SARSA agent (S) drive autonomously
+python scripts/play_agent.py R
 ```
 
 ### Run the full test suite
