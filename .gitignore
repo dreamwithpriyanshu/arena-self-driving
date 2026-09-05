@@ -1,0 +1,58 @@
+# =============================================================================
+# Self-Driving Car Simulation MVP — .gitignore
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+.eggs/
+
+# --- Virtual environment ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Project-specific ---
+# Checkpoints can be large; only keep them locally
+artifacts/checkpoints/*.pt
+artifacts/checkpoints/*.pth
+artifacts/checkpoints/*.pkl
+
+# Logs and reports generated at runtime
+artifacts/reports/*.json
+artifacts/reports/*.html
+
+# Human demonstration data (tracked separately)
+data/human_demonstrations/*.jsonl
+data/autonomous_logs/*.jsonl
+
+# Don't commit .env (it contains local paths)
+# Uncomment the line below if you want to keep .env out of git:
+# .env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- pytest ---
+.pytest_cache/
+htmlcov/
+.coverage
