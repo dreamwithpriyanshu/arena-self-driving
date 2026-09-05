@@ -1,53 +1,62 @@
-# End-to-End Training Guide (CLI & Native PyGame)
+# Training Manual
 
-This walkthrough explains how to execute the entire 7-day training workflow using the new high-performance CLI workflow.
+This manual explains how to use the Native PyGame simulation and CLI to train both the **DQN (Vehicle R)** and **SARSA (Vehicle S)** agents.
 
-## 1. Record Human Demonstrations
-Before the autonomous agents can learn efficiently, they need a safe baseline.
+## 1. Human Demonstration Phase
+Before autonomous training begins, you must provide a human baseline.
+Since Web Browser rendering is too slow for 60FPS physics, you will record demonstrations natively using PyGame.
 
-1. Open your terminal.
-2. Run the human play script for **Agent: R (DQN)**:
+1. Open a terminal and run:
    ```bash
    python scripts/play_human.py R
    ```
-3. The Native PyGame window will open. Press `ENTER` and use your arrow keys to control the car safely.
-4. Survive without crashing until the time limit to save the episode. If you crash, press `ESC` to discard the bad data.
-5. Repeat until you have ~10-20 saved episodes.
-6. Repeat the process for **Agent: S (SARSA)**: `python scripts/play_human.py S`
+   (Replace `R` with `S` to record for SARSA).
+2. Press `ENTER` to start the PyGame window.
+3. Use the arrow keys (⬆️ Accelerate, ⬇️ Brake, ⬅️ Left, ➡️ Right) to drive the car safely.
+4. To safely exit and discard a bad run, press `ESC`.
+5. Survive until the time limit or crash to finish the episode.
+6. Aim for at least 10–20 good demonstrations per agent.
 
-## 2. Headless Autonomous Training (Fastest)
-The most efficient way to train the agents is via the headless CLI orchestrator.
+> **Pro Tip:** You can dial the difficulty up or down by passing arguments:
+> `python scripts/play_human.py R --vehicles-count 30 --vehicles-density 1.5`
 
-1. In your terminal, run the batch trainer:
+## 2. Autonomous Training (CLI)
+Once you have recorded demonstrations, you can train the agents using the powerful, headless CLI orchestrator.
+
+1. Open a terminal and run the batch trainer:
    ```bash
    python scripts/train.py --agent BOTH --episodes 100 --warm-start --batch-size 64
    ```
 2. The `--warm-start` flag will automatically load your human demonstrations to prefill the DQN replay buffer and initialize the SARSA Q-table.
-3. The script will rapidly simulate 100 episodes without rendering overhead, logging metrics and saving checkpoints periodically.
+3. The system will autonomously simulate the episodes in the background at maximum speed (no rendering overhead).
+4. The script will save checkpoints to `artifacts/checkpoints` periodically.
 
-## 3. Live AI Training (Visual)
-If you want to actually *watch* the agents learn in real-time, you can enable training during live evaluation!
-
-1. Run the multi-agent visualizer with the `--train` flag:
+## 3. Live AI Training (Native PyGame)
+If you prefer to physically watch the agent learn and make mistakes in real-time:
+1. Open a terminal and run with the `--train` and `--save` flags:
    ```bash
-   python scripts/play_multi_agent.py --train --save --duration 500
+   python scripts/play_agent.py R --train --save
    ```
-2. The PyGame window will open, and both DQN and SARSA will drive simultaneously.
-3. Because `--train` is active, they will actively explore (epsilon > 0) and update their networks/tables after every step!
-4. When you exit, the `--save` flag ensures their newly learned weights are saved.
+2. The agent will drive autonomously, actively exploring the environment ($\epsilon > 0$) and updating its neural networks / Q-tables after every step.
+3. When the PyGame window is closed, it will automatically save the new checkpoints.
 
-## 4. Evaluate Performance & Analytics
-To see the result of your training without any random exploration (pure exploitation):
+To watch BOTH agents drive in the same simulation concurrently and learn:
+```bash
+python scripts/play_multi_agent.py --train --save --duration 500
+```
 
-1. Run the agent natively:
+## 4. Evaluation & Analytics
+To see the results of your training without any random exploration (pure exploitation):
+1. Run the agent natively without the `--train` flag:
    ```bash
    python scripts/play_agent.py R
    ```
-   (Notice the absence of `--train`, meaning it will drive using its fully optimized, greedy policy).
 
-2. **Analytics Dashboard**: 
-   Open the Streamlit app to view the performance metrics, loss curves, and side-by-side agent accuracy:
+2. To dig deeper into the agent's internal learning state, visit the **Performance Analytics** page in the Streamlit Dashboard:
    ```bash
    streamlit run app.py
    ```
-   Navigate to the **Performance Analytics** page to dive deep into the math!
+   - **Global Comparison**: Accuracy & Survival Steps for R and S on the same charts.
+   - **DQN**: Average Loss and Epsilon decay.
+   - **SARSA**: Average TD Error and Epsilon decay.
+   - **Raw History**: The tabular data of all recorded episodes.

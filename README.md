@@ -102,7 +102,7 @@ pip install -r requirements.txt
 
 ### Run the Streamlit Dashboard (Data & Analytics)
 
-Streamlit is used purely as a data command center. Use it to view collected datasets, trigger model training batches, and view side-by-side performance analytics.
+Streamlit is used purely as a data command center. Use it to view collected datasets and side-by-side performance analytics of the trained models.
 ```bash
 streamlit run app.py
 ```
@@ -172,10 +172,10 @@ After all 5 build steps, a **7-day human training cycle** begins.
 ## 📖 Documentation
 
 - [Architecture](docs/architecture.md) — layer diagram and dependency rules
-- [Training Manual](docs/training_manual.md) — guide to human-demonstration and agent training
+- [Training Manual](tutorials/training_guide.md) — guide to human-demonstration and agent training
+- [Simulation Output](tutorials/simulation_output.md) — how to interpret what you see in the PyGame window
 - [Algorithm Notes](docs/algorithm_notes.md) — DQN vs SARSA explained
 - [Security Notes](docs/security_notes.md) — file I/O and input validation
-- [UI Design System](docs/ui_design_system.md) — palette, typography, layout
 
 ---
 

@@ -13,7 +13,7 @@ st.title("Data Command Center")
 st.markdown("""
 Welcome to the Arena Self-Driving dashboard. 
 
-This interface is dedicated to **data viewing, model training, and performance analytics**. 
+This interface is dedicated to **data viewing and performance analytics**. 
 To ensure maximum performance and 60FPS physics, all simulation and gameplay has been moved to native desktop windows.
 """)
 

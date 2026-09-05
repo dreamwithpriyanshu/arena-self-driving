@@ -49,3 +49,7 @@ data/autonomous_logs/*
 .pytest_cache/
 htmlcov/
 .coverage
+
+# --- Excluded during refactor ---
+scratch/
+.env
