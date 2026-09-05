@@ -12,16 +12,13 @@ from __future__ import annotations
 from typing import Any, Optional
 from pathlib import Path
 
-# Safe to import here (behind the facade)
-from src.human.episode_manager import EpisodeManager
-
-
 class HumanFacade:
     """
     Wrapper for the human EpisodeManager to be used by the UI.
     """
 
     def __init__(self, base_dir: str | Path = "data/human_demonstrations") -> None:
+        from src.human.episode_manager import EpisodeManager
         self.manager = EpisodeManager(base_dir=base_dir, render_mode="rgb_array")
 
     def start(self, vehicle: str = "R", seed: Optional[int] = None) -> Any:
