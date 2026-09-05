@@ -40,13 +40,21 @@ ACTION_INDEX: dict[str, int] = {a.name: a.value for a in Action}
 """Maps action name → index, e.g. {'LANE_LEFT': 0, …}."""
 
 # Keyboard mapping — used by the human recorder (Build Step 2).
-# Keys are Streamlit-compatible key names (lowercase).
+# Keys are lowercase key names from the browser keyboard event.
 KEYBOARD_ACTION_MAP: dict[str, int] = {
+    # Arrow keys
     "arrowleft": Action.LANE_LEFT,
     "arrowright": Action.LANE_RIGHT,
     "arrowup": Action.FASTER,
     "arrowdown": Action.SLOWER,
-    " ": Action.IDLE,           # Spacebar → idle
+    # WASD
+    "a": Action.LANE_LEFT,
+    "d": Action.LANE_RIGHT,
+    "w": Action.FASTER,
+    "s": Action.SLOWER,
+    # Spacebar → idle / emergency brake
+    " ": Action.IDLE,
+    "spacebar": Action.IDLE,
 }
 """Maps keyboard key names to action indices for human driving."""
 
