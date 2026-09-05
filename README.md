@@ -98,7 +98,25 @@ pip install -r requirements.txt
 
 ### Environment variables
 
-Copy and optionally edit the `.env` file.  It contains no secrets — only local paths and runtime flags.
+Create a `.env` file in the project root to control local paths and runtime flags.
+It requires no external API keys or secrets. Here is a standard configuration you can copy and paste:
+
+```ini
+# Data paths (relative to project root)
+DATA_DIR=data
+HUMAN_DEMO_DIR=data/human_demonstrations
+AUTONOMOUS_LOG_DIR=data/autonomous_logs
+CHECKPOINT_DIR=artifacts/checkpoints
+REPORT_DIR=artifacts/reports
+
+# Environment config
+ENV_CONFIG_PATH=configs/default_env.yaml
+
+# Runtime flags
+DEBUG=false
+STREAMLIT_SERVER_PORT=8501
+STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+```
 
 ---
 

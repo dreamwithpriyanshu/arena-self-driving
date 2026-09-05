@@ -56,7 +56,8 @@ with col2:
             ego_lane=current_state.lane_index,
             vehicle_type="R" # Default cyan for inspector
         )
-        st.markdown(svg_html, unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        components.html(svg_html, height=320)
         
     # Telemetry
     if current_state:

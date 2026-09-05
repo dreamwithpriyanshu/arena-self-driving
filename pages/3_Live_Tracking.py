@@ -34,7 +34,9 @@ with col2:
     # Render empty highway initially
     if not run_btn and not eval_btn:
         empty_html = render_highway_svg(raw_state=[], ego_lane=0)
-        svg_container.markdown(empty_html, unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        with svg_container:
+            components.html(empty_html, height=320)
         st.info("Select an agent and click Run Episode.")
 
 if run_btn or eval_btn:
@@ -48,7 +50,9 @@ if run_btn or eval_btn:
             ego_lane=result.lane_index,
             vehicle_type=v_id
         )
-        svg_container.markdown(svg_html, unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        with svg_container:
+            components.html(svg_html, height=320)
         
         # Update Telemetry
         with metrics_container.container():

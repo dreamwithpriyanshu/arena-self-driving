@@ -12,18 +12,30 @@ import numpy as np
 
 # A basic CSS + SVG template for the road
 SVG_TEMPLATE = """
+<style>
+@keyframes scrollRoad {{
+    from {{ background-position: 0 0; }}
+    to {{ background-position: -40px 0; }}
+}}
+.road-line {{
+    position: absolute; width: 100%; height: 2px;
+    background-image: linear-gradient(to right, #FFF 50%, transparent 50%);
+    background-size: 40px 100%; opacity: 0.3;
+    animation: scrollRoad 0.5s linear infinite;
+}}
+</style>
 <div style="width: 100%; height: 300px; background-color: #1E1E24; position: relative; overflow: hidden; border-radius: 8px; border: 1px solid #333;">
     <!-- Road lines -->
-    <div style="position: absolute; top: 25%; width: 100%; height: 2px; background-image: linear-gradient(to right, #FFF 50%, transparent 50%); background-size: 40px 100%; opacity: 0.3;"></div>
-    <div style="position: absolute; top: 50%; width: 100%; height: 2px; background-image: linear-gradient(to right, #FFF 50%, transparent 50%); background-size: 40px 100%; opacity: 0.3;"></div>
-    <div style="position: absolute; top: 75%; width: 100%; height: 2px; background-image: linear-gradient(to right, #FFF 50%, transparent 50%); background-size: 40px 100%; opacity: 0.3;"></div>
+    <div class="road-line" style="top: 25%;"></div>
+    <div class="road-line" style="top: 50%;"></div>
+    <div class="road-line" style="top: 75%;"></div>
     
     {cars_html}
 </div>
 """
 
 CAR_TEMPLATE = """
-<div style="position: absolute; left: {left}%; top: {top}%; width: 60px; height: 30px; transform: translate(-50%, -50%); transition: left 0.1s linear, top 0.1s linear;">
+<div style="position: absolute; left: {left}%; top: {top}%; width: 60px; height: 30px; transform: translate(-50%, -50%); transition: left 0.3s ease-in-out, top 0.3s ease-in-out;">
     {svg_content}
 </div>
 """

@@ -66,7 +66,8 @@ with col2:
                 ego_lane=lane,
                 vehicle_type=v_id
             )
-            st.markdown(svg_html, unsafe_allow_html=True)
+            import streamlit.components.v1 as components
+            components.html(svg_html, height=320)
             
         st.metric("Steps Recorded", facade.step_count)
         
