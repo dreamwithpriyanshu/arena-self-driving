@@ -49,10 +49,12 @@ class EpisodeManager:
         base_dir: str | Path = "data/human_demonstrations",
         config_overrides: Optional[dict[str, Any]] = None,
         render_mode: str = "rgb_array",
+        max_steps: int = 1000,
     ) -> None:
         self._base_dir = base_dir
         self._config_overrides = config_overrides or {}
         self._render_mode = render_mode
+        self._max_steps = max_steps
 
         self._env_mgr: Optional[EnvManager] = None
         self._recorder: Optional[TransitionRecorder] = None
@@ -132,8 +134,8 @@ class EpisodeManager:
         )
 
         logger.info(
-            "Human episode started: vehicle=%s, seed=%s",
-            vehicle, seed,
+            "Human episode started: vehicle=%s, seed=%s, max_steps=%d",
+            vehicle, seed, self._max_steps,
         )
         return result
 
@@ -171,6 +173,10 @@ class EpisodeManager:
 
         # Step the environment
         result = self._env_mgr.step(action)
+        
+        # Enforce max steps if environment didn't already truncate
+        if self._env_mgr.step_count >= self._max_steps and not result.terminated:
+            result.truncated = True
 
         # Record the transition
         transition = Transition(
@@ -193,9 +199,10 @@ class EpisodeManager:
         if result.terminated or result.truncated:
             self._episode_done = True
             logger.info(
-                "Episode ended after %d steps (reward=%.2f)",
+                "Episode ended after %d steps (reward=%.2f, truncated=%s)",
                 self._env_mgr.step_count,
                 self._env_mgr.total_reward,
+                result.truncated,
             )
 
         return result
