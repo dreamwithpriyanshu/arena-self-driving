@@ -169,6 +169,7 @@ def load_all_transitions(
     directory: str | Path = "data/human_demonstrations",
     validate: bool = True,
     expected_state_dim: Optional[int] = None,
+    skip_invalid: bool = True,
 ) -> list[Transition]:
     """
     Load and flatten all transitions from all episodes in a directory.
@@ -178,6 +179,7 @@ def load_all_transitions(
     episodes = load_all_episodes(
         directory, validate=validate,
         expected_state_dim=expected_state_dim,
+        skip_invalid=skip_invalid,
     )
     all_transitions: list[Transition] = []
     for _meta, transitions in episodes:
