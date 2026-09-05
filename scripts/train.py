@@ -1,0 +1,124 @@
+"""
+The Ultimate CLI Trainer.
+Headless orchestration for DQN and SARSA agents. 
+Supports batch training, warm-starting, and live metrics logging.
+"""
+import sys
+import argparse
+import time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.agents.dqn import DQNAgent
+from src.agents.sarsa import SARSAAgent
+from src.training.orchestrator import TrainingOrchestrator
+from src.simulation.env_manager import EnvManager
+
+def main():
+    parser = argparse.ArgumentParser(description="Headless CLI Trainer for DQN and SARSA")
+    parser.add_argument("--agent", type=str, choices=["R", "S", "BOTH"], default="BOTH", help="Agent(s) to train: R (DQN), S (SARSA), or BOTH")
+    parser.add_argument("--episodes", type=int, default=10, help="Number of episodes to train")
+    parser.add_argument("--warm-start", action="store_true", help="Warm-start agents using human demonstrations before training")
+    parser.add_argument("--batch-size", type=int, default=64, help="DQN replay buffer batch size")
+    parser.add_argument("--epsilon-start", type=float, default=1.0, help="Initial exploration rate")
+    parser.add_argument("--epsilon-decay", type=float, default=0.995, help="Exploration decay rate")
+    parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
+    parser.add_argument("--duration", type=int, default=120, help="Max duration of an episode in steps")
+    parser.add_argument("--save-freq", type=int, default=5, help="Save checkpoints every N episodes")
+    
+    args = parser.parse_args()
+    
+    print("=======================================")
+    print("      SELF-DRIVING CAR CLI TRAINER")
+    print("=======================================")
+    print(f"Agents       : {args.agent}")
+    print(f"Episodes     : {args.episodes}")
+    print(f"Warm Start   : {'Yes' if args.warm_start else 'No'}")
+    print(f"Epsilon      : {args.epsilon_start} (Decay: {args.epsilon_decay})")
+    print(f"Traffic      : {args.vehicles_count} NPCs")
+    print("=======================================")
+
+    # Initialize Agents
+    dqn = DQNAgent(
+        batch_size=args.batch_size,
+        epsilon_start=args.epsilon_start,
+        epsilon_decay=args.epsilon_decay
+    )
+    sarsa = SARSAAgent(
+        epsilon_start=args.epsilon_start,
+        epsilon_decay=args.epsilon_decay
+    )
+    
+    checkpoint_dir = Path("artifacts/checkpoints")
+    
+    # Try loading existing checkpoints
+    try:
+        dqn.load(checkpoint_dir)
+        print("Loaded existing DQN checkpoint.")
+    except FileNotFoundError:
+        print("No existing DQN checkpoint. Starting fresh.")
+        
+    try:
+        sarsa.load(checkpoint_dir)
+        print("Loaded existing SARSA checkpoint.")
+    except FileNotFoundError:
+        print("No existing SARSA checkpoint. Starting fresh.")
+
+    # Orchestrator
+    orchestrator = TrainingOrchestrator(dqn_agent=dqn, sarsa_agent=sarsa, checkpoint_dir=checkpoint_dir)
+
+    # Warm Start
+    if args.warm_start:
+        stats = orchestrator.warm_start()
+        print(f"\nWarm-Start Complete:")
+        print(f"  Transitions Loaded  : {stats.get('loaded', 0)}")
+        print(f"  DQN Buffer Prefilled: {stats.get('r_prefilled', 0)}")
+        print(f"  SARSA Table Updates : {stats.get('s_warm_started', 0)}")
+
+    # Environment
+    config_overrides = {
+        "vehicles_count": args.vehicles_count,
+        "duration": args.duration,
+    }
+    env_mgr = EnvManager(render_mode="rgb_array", config_overrides=config_overrides)
+    
+    agents_to_train = ["R", "S"] if args.agent == "BOTH" else [args.agent]
+    
+    print("\nStarting Autonomous Training...")
+    start_time = time.time()
+    
+    try:
+        for ep in range(1, args.episodes + 1):
+            print(f"\n--- Episode {ep}/{args.episodes} ---")
+            
+            for vehicle in agents_to_train:
+                print(f"Training Agent {vehicle}...", end="", flush=True)
+                
+                metrics = orchestrator.train_episode(
+                    vehicle=vehicle,
+                    env_mgr=env_mgr,
+                    max_steps=args.duration
+                )
+                
+                print(f" Done! (Reward: {metrics['total_reward']:+.2f}, Steps: {metrics['steps']})")
+                print(f"  Details: Epsilon={metrics.get('epsilon', 0):.3f} | Crashed: {metrics['terminated']}")
+                
+            if ep % args.save_freq == 0:
+                orchestrator.save_checkpoints()
+                print(f"[!] Saved Checkpoints at Episode {ep}")
+                
+    except KeyboardInterrupt:
+        print("\n\nTraining interrupted by user!")
+    finally:
+        env_mgr.close()
+        orchestrator.save_checkpoints()
+        
+    end_time = time.time()
+    print(f"\n=======================================")
+    print(f"Training Finished! Total Time: {(end_time - start_time):.2f}s")
+    print(f"Checkpoints saved to: {checkpoint_dir}")
+    print("=======================================")
+
+
+if __name__ == "__main__":
+    main()

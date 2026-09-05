@@ -1,44 +1,53 @@
-# End-to-End Training Guide
+# End-to-End Training Guide (CLI & Native PyGame)
 
-This walkthrough explains how to execute the entire 7-day training workflow using the Streamlit interface.
+This walkthrough explains how to execute the entire 7-day training workflow using the new high-performance CLI workflow.
 
 ## 1. Record Human Demonstrations
 Before the autonomous agents can learn efficiently, they need a safe baseline.
 
-1. Open the UI and click **Human Training** in the sidebar.
-2. Select **Agent: R (DQN)**.
-3. Click **Start Recording**.
-4. Use the on-screen buttons to control the car.
-5. If the episode is safe, click **Save Episode**. If you crash, click **Discard Episode**.
-6. Repeat until you have ~10-20 saved episodes.
-7. Repeat the process for **Agent: S (SARSA)**.
+1. Open your terminal.
+2. Run the human play script for **Agent: R (DQN)**:
+   ```bash
+   python scripts/play_human.py R
+   ```
+3. The Native PyGame window will open. Press `ENTER` and use your arrow keys to control the car safely.
+4. Survive without crashing until the time limit to save the episode. If you crash, press `ESC` to discard the bad data.
+5. Repeat until you have ~10-20 saved episodes.
+6. Repeat the process for **Agent: S (SARSA)**: `python scripts/play_human.py S`
 
-![Human Training](screenshots/2_human_training.png)
+## 2. Headless Autonomous Training (Fastest)
+The most efficient way to train the agents is via the headless CLI orchestrator.
 
-## 2. Warm-Start the Agents
-Once demonstrations are recorded, you must inject them into the agents.
+1. In your terminal, run the batch trainer:
+   ```bash
+   python scripts/train.py --agent BOTH --episodes 100 --warm-start --batch-size 64
+   ```
+2. The `--warm-start` flag will automatically load your human demonstrations to prefill the DQN replay buffer and initialize the SARSA Q-table.
+3. The script will rapidly simulate 100 episodes without rendering overhead, logging metrics and saving checkpoints periodically.
 
-1. Go to the **Train & Compare** page.
-2. Click **Warm-Start (Human Demos)**.
-3. You should see a success message indicating how many transitions were loaded into the DQN Replay Buffer and the SARSA Q-Table.
+## 3. Live AI Training (Visual)
+If you want to actually *watch* the agents learn in real-time, you can enable training during live evaluation!
 
-![Train & Compare](screenshots/5_train_and_compare.png)
+1. Run the multi-agent visualizer with the `--train` flag:
+   ```bash
+   python scripts/play_multi_agent.py --train --save --duration 500
+   ```
+2. The PyGame window will open, and both DQN and SARSA will drive simultaneously.
+3. Because `--train` is active, they will actively explore (epsilon > 0) and update their networks/tables after every step!
+4. When you exit, the `--save` flag ensures their newly learned weights are saved.
 
-## 3. Run Autonomous Training
-The agents are now ready to practice on their own.
+## 4. Evaluate Performance & Analytics
+To see the result of your training without any random exploration (pure exploitation):
 
-1. On the **Train & Compare** page, select the number of **Episodes per batch** (e.g., 5).
-2. Click **Train DQN (R)** or **Train SARSA (S)**.
-3. The Live Performance Curves will update incrementally as the batch runs.
-4. Watch the Reward and Survival Steps climb as the agents learn to avoid crashes.
-5. **Important**: Click **Save Checkpoints** before closing the browser!
+1. Run the agent natively:
+   ```bash
+   python scripts/play_agent.py R
+   ```
+   (Notice the absence of `--train`, meaning it will drive using its fully optimized, greedy policy).
 
-## 4. Evaluate Performance
-To see the result of your training without any random exploration:
-
-1. Go to the **Live Tracking** page.
-2. Select the agent.
-3. Click **Evaluate (Greedy)**.
-4. The agent will drive using its fully optimized policy, rendering its actions live.
-
-![Live Tracking](screenshots/3_live_tracking.png)
+2. **Analytics Dashboard**: 
+   Open the Streamlit app to view the performance metrics, loss curves, and side-by-side agent accuracy:
+   ```bash
+   streamlit run app.py
+   ```
+   Navigate to the **Performance Analytics** page to dive deep into the math!

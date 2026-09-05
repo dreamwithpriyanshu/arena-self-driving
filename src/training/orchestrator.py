@@ -191,21 +191,7 @@ class TrainingOrchestrator:
 
         return summary
 
-    def train_step(self, vehicle: str, env_mgr: EnvManager) -> dict[str, Any]:
-        """
-        Run exactly one training step. Useful for live UI tracking.
-        Must be called after env_mgr.reset().
-        """
-        agent = self.dqn if vehicle == "R" else self.sarsa
-        agent.set_eval_mode(False)
 
-        # We assume prev_result is stored somewhere, or we can just fetch it from env_mgr
-        # Wait, env_mgr doesn't store the current state natively, it just returns StepResult.
-        # But EnvManager *does* track step_count.
-        # Let's assume the UI passes the last StepResult, OR we can just get the raw observation from the env directly?
-        # Better: we just run one step and return the result.
-        # To do a proper RL update we need the PREVIOUS state.
-        pass # Will rewrite this carefully
 
     def evaluate_episode(
         self,
