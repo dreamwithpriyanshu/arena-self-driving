@@ -18,7 +18,7 @@ import gymnasium as gym
 import yaml
 
 # Ensure HighwayEnv environments are registered with Gymnasium.
-import highway_env  # noqa: F401
+import highway_env  # noqa: F401 (Registers the environments with gymnasium)
 
 # ---------------------------------------------------------------------------
 # Defaults

@@ -9,13 +9,12 @@ st.markdown("All project documentation is available here for easy review.")
 docs_dir = Path("docs")
 
 docs_files = [
-    "project_overview.md",
     "architecture.md",
+    "training_manual.md",
+    "human_training_7_day_plan.md",
     "algorithm_notes.md",
     "ui_design_system.md",
     "security_notes.md",
-    "training_manual.md",
-    "human_training_7_day_plan.md"
 ]
 
 tabs = st.tabs([f.replace(".md", "").replace("_", " ").title() for f in docs_files])

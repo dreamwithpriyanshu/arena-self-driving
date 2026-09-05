@@ -64,6 +64,15 @@ arena-self-driving/
 
 ---
 
+## 🧠 Why it matters
+
+This is a college-level project designed to:
+1. Show how the same human-driving data can bootstrap two fundamentally different RL algorithms.
+2. Make the comparison **watchable** — a reviewer can open the app and see both cars driving live, not just read log files.
+3. Produce reproducible, transparent results with no manufactured numbers.
+
+---
+
 ## 🛠️ Setup
 
 ### Prerequisites
@@ -89,8 +98,7 @@ pip install -r requirements.txt
 
 ### Environment variables
 
-Copy and optionally edit the `.env` file.  It contains no secrets — only
-local paths and runtime flags.
+Copy and optionally edit the `.env` file.  It contains no secrets — only local paths and runtime flags.
 
 ---
 
@@ -102,10 +110,10 @@ local paths and runtime flags.
 streamlit run app.py
 ```
 
-### Run the smoke test (Build Step 1)
+### Run the full test suite
 
 ```bash
-python scripts/test_step1.py
+pytest tests/ -v
 ```
 
 ---
@@ -129,11 +137,11 @@ python scripts/test_step1.py
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Environment, actions, state | 🔨 In progress |
-| 2 | Human recorder | ⏳ Pending |
-| 3 | R (DQN) + S (SARSA) agents | ⏳ Pending |
-| 4 | Joint training + Streamlit UI | ⏳ Pending |
-| 5 | QA + handoff | ⏳ Pending |
+| 1 | Environment, actions, state | ✅ Complete |
+| 2 | Human recorder | ✅ Complete |
+| 3 | R (DQN) + S (SARSA) agents | ✅ Complete |
+| 4 | Joint training + Streamlit UI | ✅ Complete |
+| 5 | QA + handoff | ✅ Complete |
 
 After all 5 build steps, a **7-day human training cycle** begins.
 
@@ -142,10 +150,10 @@ After all 5 build steps, a **7-day human training cycle** begins.
 ## 📖 Documentation
 
 - [Architecture](docs/architecture.md) — layer diagram and dependency rules
-- [Project Overview](docs/project_overview.md) — goals and tech stack
-- [Algorithm Notes](docs/algorithm_notes.md) — DQN vs SARSA explained *(Step 3)*
-- [Security Notes](docs/security_notes.md) — file I/O and input validation *(Step 2)*
-- [UI Design System](docs/ui_design_system.md) — palette, typography, layout *(Step 4)*
+- [Training Manual](docs/training_manual.md) — guide to human-demonstration and agent training
+- [Algorithm Notes](docs/algorithm_notes.md) — DQN vs SARSA explained
+- [Security Notes](docs/security_notes.md) — file I/O and input validation
+- [UI Design System](docs/ui_design_system.md) — palette, typography, layout
 
 ---
 

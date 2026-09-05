@@ -137,47 +137,18 @@ def test_recorder_security() -> None:
     rec.discard_episode()
 
 
-def main() -> int:
-    print("=" * 60)
-    print("  Build Step 2 Smoke Test -- Human Recorder")
-    print("=" * 60)
 
-    tests = [
-        test_keyboard_controller,
-        test_episode_manager_and_recorder,
-        test_validator_and_loader,
-        test_recorder_security,
-    ]
+import pytest
+import shutil
+from pathlib import Path
 
-    passed = 0
-    failed = 0
-    for test_fn in tests:
-        try:
-            test_fn()
-            passed += 1
-        except Exception as exc:
-            failed += 1
-            print(f"\n  [FAIL] {test_fn.__name__}")
-            print(f"    {type(exc).__name__}: {exc}")
-            import traceback
-            traceback.print_exc()
-
-    _header("SUMMARY")
-    print(f"  Passed: {passed}/{len(tests)}")
-    print(f"  Failed: {failed}/{len(tests)}")
-    
-    # Clean up test dir
+@pytest.fixture(scope="module", autouse=True)
+def cleanup_test_dir():
+    # Setup
     test_dir = Path("data/test_human_demos")
     if test_dir.exists():
         shutil.rmtree(test_dir)
-
-    if failed == 0:
-        print("\n  ALL SMOKE TESTS PASSED\n")
-        return 0
-    else:
-        print("\n  SOME TESTS FAILED\n")
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    yield
+    # Teardown
+    if test_dir.exists():
+        shutil.rmtree(test_dir)

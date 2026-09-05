@@ -4,22 +4,22 @@
 # Python >=3.9
 
 # --- Core simulation ---
-highway-env>=1.9
-gymnasium>=0.29,<1.0
+highway-env>=1.9      # The core 2D driving simulation environment
+gymnasium>=0.29,<1.0  # Required API wrapper for highway-env
 
 # --- ML / numeric ---
-numpy>=1.24
-torch>=2.0
+numpy>=1.24           # Used for SARSA table, array manipulation, and random sampling
+torch>=2.0            # Used strictly for the DQN agent's neural networks
 
 # --- UI ---
-streamlit>=1.30,<2.0
-plotly>=5.18,<6.0
-altair>=5.2,<6.0
+streamlit>=1.30,<2.0  # Web framework for the frontend application
+plotly>=5.18,<6.0     # (Optional/Legacy) Kept for complex interactive plots if needed
+altair>=5.2,<6.0      # Primary charting library for the Analytics/Train pages
 
 # --- Data & config ---
-pyyaml>=6.0,<7.0
-python-dotenv>=1.0,<2.0
-pandas>=2.1,<3.0
+pyyaml>=6.0,<7.0      # Used to parse configs/default_env.yaml
+python-dotenv>=1.0,<2.0 # Loads runtime paths/flags from .env
+pandas>=2.1,<3.0      # Data manipulation for Streamlit charting/metrics
 
 # --- Dev / testing ---
-pytest>=7.4,<9.0
+pytest>=7.4,<9.0      # Core test runner for the CI/smoke test suite
