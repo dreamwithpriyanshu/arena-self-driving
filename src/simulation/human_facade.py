@@ -58,3 +58,9 @@ class HumanFacade:
         if self.manager._prev_result:
             return self.manager._prev_result.raw_state
         return None
+
+    @property
+    def lane_index(self) -> int:
+        if self.manager._prev_result:
+            return self.manager._prev_result.lane_index
+        return 0

@@ -83,17 +83,17 @@ def render_highway_svg(raw_state: list[float], ego_lane: int, vehicle_type: str 
         if np.allclose(row, 0.0) and i != 0:
             continue
             
-        rel_x = row[0]
-        # X is relative to ego
-        left_pct = EGO_X_PERCENT + (rel_x * 40) # Scale factor for visual spread
-        
         if i == 0:
             # Ego vehicle
             # Y is absolute lane
+            left_pct = EGO_X_PERCENT
             top_pct = (ego_lane * LANE_HEIGHT_PERCENT) + (LANE_HEIGHT_PERCENT / 2)
             color = "#00E5FF" if vehicle_type == "R" else "#FF9100"
         else:
             # NPC vehicle
+            rel_x = row[0]
+            left_pct = EGO_X_PERCENT + (rel_x * 40)
+            
             rel_y = row[1]
             # Estimate NPC absolute lane by adding relative Y (scaled) to ego lane
             npc_lane = ego_lane + (rel_y * 4)  # Rough approximation since rel_y is normalized by ~lane_width

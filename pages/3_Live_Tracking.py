@@ -19,8 +19,8 @@ with col1:
     vehicle_choice = st.radio("Agent:", ["R (DQN)", "S (SARSA)"])
     v_id = "R" if "R" in vehicle_choice else "S"
     
-    speed = st.slider("Playback Speed", min_value=1, max_value=10, value=5)
-    sleep_time = 0.5 / speed
+    speed = st.slider("Playback Speed", min_value=1, max_value=10, value=2)
+    sleep_time = 1.0 / speed
     
     run_btn = st.button("Run Episode", type="primary", use_container_width=True)
     eval_btn = st.button("Evaluate (Greedy)", use_container_width=True)

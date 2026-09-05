@@ -58,8 +58,8 @@ with col2:
     st.subheader("Live View")
     if facade.episode_active:
         raw_state = facade.raw_state
-        # Fallback lane estimate for MVP UI
-        lane = 0
+        lane = facade.lane_index
+        
         if raw_state is not None:
             svg_html = render_highway_svg(
                 raw_state=raw_state.tolist(),
@@ -75,3 +75,28 @@ with col2:
             st.error("Episode ended (collision or time limit). Please Save or Discard.")
     else:
         st.info("Start a recording to see the view.")
+
+# Inject JavaScript to map physical keyboard arrow keys to the Streamlit buttons
+import streamlit.components.v1 as components
+components.html("""
+<script>
+const doc = window.parent.document;
+doc.addEventListener('keydown', function(e) {
+    let targetText = null;
+    switch(e.key) {
+        case 'ArrowUp': targetText = 'Accelerate'; break;
+        case 'ArrowDown': targetText = 'Brake'; break;
+        case 'ArrowLeft': targetText = 'Left'; break;
+        case 'ArrowRight': targetText = 'Right'; break;
+        case ' ': targetText = 'IDLE'; break;
+    }
+    if (targetText) {
+        // Prevent default scrolling for arrows and space
+        e.preventDefault();
+        const buttons = Array.from(doc.querySelectorAll('button'));
+        const btn = buttons.find(b => b.innerText.includes(targetText));
+        if (btn) btn.click();
+    }
+});
+</script>
+""", height=0, width=0)

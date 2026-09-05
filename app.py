@@ -36,5 +36,29 @@ st.markdown("""
     [data-testid="stMetricValue"] {
         font-family: monospace;
     }
+    
+    /* Premium Buttons */
+    div.stButton > button {
+        border-radius: 6px;
+        border: 1px solid #333;
+        background-color: #282830;
+        color: #E0E0E0;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+    div.stButton > button:hover {
+        background-color: #383840;
+        border-color: #00E5FF;
+        color: #00E5FF;
+        transform: translateY(-1px);
+    }
+    div.stButton > button:active {
+        transform: translateY(1px);
+    }
+    
+    /* Primary Buttons */
+    div.stButton > button[data-baseweb="button"]:has(div p) {
+        /* Streamlit v1.30+ primary button styling fallback */
+    }
 </style>
 """, unsafe_allow_html=True)

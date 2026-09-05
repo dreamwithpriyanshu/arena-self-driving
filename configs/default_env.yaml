@@ -6,8 +6,9 @@
 
 # --- Road & traffic ---
 lanes_count: 4                # number of highway lanes
-vehicles_count: 15            # NPC vehicles on the road
-vehicles_density: 1.0         # multiplier (increase for dense-traffic days)
+vehicles_count: 20            # NPC vehicles on the road
+vehicles_density: 1.5         # multiplier (increase for dense-traffic days)
+ego_spacing: 1.5              # Space between ego and NPCs (allows cars to spawn behind)
 initial_lane_id: null         # null → random starting lane
 
 # --- Observation ---
@@ -41,7 +42,7 @@ reward:
 
 # --- Simulation timing ---
 simulation_frequency: 15      # physics steps per second
-policy_frequency: 5           # agent decisions per second
+policy_frequency: 1           # agent decisions per second (1 action = 1 full second)
 duration: 40                  # max episode length (seconds)
 
 # --- Rendering ---
