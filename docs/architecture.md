@@ -67,10 +67,9 @@ current state for rendering, exposes metrics.
 
 | Module | Responsibility |
 |--------|---------------|
-| `env_manager.py` | `EnvManager` class — reset, step, close, get_render_data |
+| `env_manager.py` | `EnvManager` class — reset, step, close |
 | `training_facade.py` | `TrainingFacade` class — exposes UI-safe orchestrator methods |
-| `human_facade.py` | `HumanFacade` class — exposes EpisodeManager for recording |
-| `renderer.py` | Converts raw state tensor to SVG top-down rendering |
+
 
 **Pages never import** from `envs`, `agents`, or `training` directly.
 
@@ -87,7 +86,6 @@ what `simulation`/`data` expose.
 |------|-----------|---------|
 | `Action` (IntEnum) | `envs.actions` | all layers |
 | `StepResult` (dataclass) | `simulation.env_manager` | pages, training |
-| `RenderData` (dataclass) | `simulation.env_manager` | pages |
 | Raw observation `np.ndarray(V,F)` | HighwayEnv | envs, simulation |
 | Discrete state `int` | `envs.state_builder` | agents (SARSA) |
 | Flat state `np.ndarray(V*F,)` | `envs.state_builder` | agents (DQN) |
@@ -96,8 +94,7 @@ what `simulation`/`data` expose.
 
 ## Configuration
 
-All environment parameters live in `configs/default_env.yaml`.
-Runtime paths and flags are in `.env` (loaded via `python-dotenv`).
+All environment parameters live in `configs/default_env.yaml`. All paths are resolved relative to the project root dynamically.
 
 ---
 

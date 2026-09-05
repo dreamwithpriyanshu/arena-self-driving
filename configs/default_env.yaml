@@ -43,7 +43,7 @@ reward:
 # --- Simulation timing ---
 simulation_frequency: 15      # physics steps per second
 policy_frequency: 1           # agent decisions per second (1 action = 1 full second)
-duration: 40                  # max episode length (seconds)
+duration: 120                 # max episode length (seconds)
 
 # --- Rendering ---
 screen_width: 600

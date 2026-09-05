@@ -275,12 +275,7 @@ class EpisodeManager:
         """The keyboard controller (for displaying mappings in UI)."""
         return self._keyboard
 
-    def get_render_data(self):
-        """Delegate to the env manager for render data."""
-        if self._env_mgr is None:
-            from src.simulation.env_manager import RenderData
-            return RenderData()
-        return self._env_mgr.get_render_data()
+
 
     # ------------------------------------------------------------------
     # Private

@@ -4,9 +4,9 @@ import altair as alt
 from src.simulation.training_facade import TrainingFacade
 from src.simulation.env_manager import EnvManager
 
-st.set_page_config(page_title="Train & Compare", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Model Training", page_icon="📈", layout="wide")
 
-st.title("Train & Compare")
+st.title("Model Training & Batch Runs")
 st.markdown("Run autonomous training batches and watch the metrics update live.")
 
 if "training_facade" not in st.session_state:

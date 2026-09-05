@@ -6,6 +6,7 @@ Bypasses the orchestrator/facade to avoid circular imports.
 Imports agents and env_manager directly.
 """
 import sys
+import argparse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -16,13 +17,14 @@ from src.simulation.env_manager import EnvManager
 
 
 def main():
-    vehicle = sys.argv[1].upper() if len(sys.argv) > 1 else "R"
-
-    if vehicle not in ("R", "S"):
-        print("Usage: python scripts/play_agent.py [R|S]")
-        print("  R = Watch the DQN agent drive")
-        print("  S = Watch the SARSA agent drive")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Agent Evaluation Interface")
+    parser.add_argument("vehicle", type=str, choices=["R", "S"], help="Vehicle agent to watch: R (DQN) or S (SARSA)")
+    parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
+    parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in steps")
+    parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier")
+    
+    args = parser.parse_args()
+    vehicle = args.vehicle.upper()
 
     pygame.init()
 
@@ -89,12 +91,18 @@ def main():
     agent.set_eval_mode(True)
 
     # ── Run evaluation episode ───────────────────────────────────
-    env_mgr = EnvManager(render_mode="human")
+    config_overrides = {
+        "vehicles_count": args.vehicles_count,
+        "duration": args.duration,
+        "vehicles_density": args.vehicles_density
+    }
+
+    env_mgr = EnvManager(render_mode="human", config_overrides=config_overrides)
     result = env_mgr.reset()
     clock = pygame.time.Clock()
 
     try:
-        for step in range(1000):
+        for step in range(args.duration):
             # Process events so the window stays responsive
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

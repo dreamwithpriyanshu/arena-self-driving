@@ -6,6 +6,7 @@ Controls are shown on a pre-game instruction screen before the
 highway window opens.
 """
 import sys
+import argparse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -60,12 +61,14 @@ def show_instructions(vehicle: str) -> bool:
 
 
 def main():
-    vehicle = (sys.argv[1].upper() if len(sys.argv) > 1 else "R")
-    if vehicle not in ("R", "S"):
-        print("Usage: python scripts/play_human.py [R|S]")
-        print("  R = Record data for the DQN agent")
-        print("  S = Record data for the SARSA agent")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Human Training Interface")
+    parser.add_argument("vehicle", type=str, choices=["R", "S"], help="Vehicle to record data for: R (DQN) or S (SARSA)")
+    parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
+    parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in steps")
+    parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier")
+    
+    args = parser.parse_args()
+    vehicle = args.vehicle.upper()
 
     pygame.init()
 
@@ -78,8 +81,14 @@ def main():
     pygame.display.quit()
 
     # ── Run the episode ──────────────────────────────────────────
-    mgr = EpisodeManager(render_mode="human")
-    mgr.start(vehicle=vehicle)
+    config_overrides = {
+        "vehicles_count": args.vehicles_count,
+        "duration": args.duration,
+        "vehicles_density": args.vehicles_density
+    }
+
+    mgr = EpisodeManager(render_mode="human", max_steps=args.duration)
+    mgr.start(vehicle=vehicle, config_overrides=config_overrides)
     clock = pygame.time.Clock()
 
     try:

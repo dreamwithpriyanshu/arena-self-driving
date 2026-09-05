@@ -67,20 +67,7 @@ class StepResult:
     """Ego vehicle's current speed (m/s)."""
 
 
-@dataclass
-class RenderData:
-    """Data needed by the UI to render the current scene."""
 
-    ego_x: float = 0.0
-    ego_y: float = 0.0
-    ego_speed: float = 0.0
-    ego_lane: int = 0
-    neighbours: list[dict[str, float]] = field(default_factory=list)
-    frame: Optional[np.ndarray] = None
-    """RGB frame if render_mode is 'rgb_array'."""
-
-
-# ---------------------------------------------------------------------------
 # Manager
 # ---------------------------------------------------------------------------
 
@@ -241,47 +228,6 @@ class EnvManager:
             finally:
                 self._is_open = False
                 self._env = None
-
-    # ------------------------------------------------------------------
-    # Query helpers (for UI pages)
-    # ------------------------------------------------------------------
-
-    def get_render_data(self) -> RenderData:
-        """
-        Return data needed to render the current scene in the UI.
-
-        Must be called *after* ``reset()`` or ``step()``.
-        """
-        if self._last_obs is None:
-            return RenderData()
-
-        obs = self._last_obs
-        ego = obs[0]
-        neighbours = []
-        for row in obs[1:]:
-            if not np.allclose(row, 0.0):
-                neighbours.append({
-                    "rel_x": float(row[0]),
-                    "rel_y": float(row[1]),
-                    "rel_vx": float(row[2]),
-                    "rel_vy": float(row[3]),
-                })
-
-        frame = None
-        if self._render_mode == "rgb_array" and self._env is not None:
-            try:
-                frame = self._env.render()
-            except Exception:
-                logger.exception("Render failed.")
-
-        return RenderData(
-            ego_x=float(ego[0]),
-            ego_y=float(ego[1]),
-            ego_speed=self._extract_speed(self._last_info),
-            ego_lane=self._extract_lane_index(self._last_info),
-            neighbours=neighbours,
-            frame=frame,
-        )
 
     @property
     def step_count(self) -> int:

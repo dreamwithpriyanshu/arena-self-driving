@@ -18,7 +18,7 @@ altair>=5.2,<6.0      # Primary charting library for the Analytics/Train pages
 
 # --- Data & config ---
 pyyaml>=6.0,<7.0      # Used to parse configs/default_env.yaml
-python-dotenv>=1.0,<2.0 # Loads runtime paths/flags from .env
+
 pandas>=2.1,<3.0      # Data manipulation for Streamlit charting/metrics
 
 # --- Dev / testing ---

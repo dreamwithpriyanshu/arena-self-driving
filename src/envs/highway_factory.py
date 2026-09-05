@@ -73,11 +73,7 @@ def load_default_config(config_path: Optional[str | Path] = None) -> dict[str, A
         The parsed configuration dictionary.
     """
     if config_path is None:
-        env_var = os.environ.get("ENV_CONFIG_PATH")
-        if env_var:
-            config_path = Path(env_var)
-        else:
-            config_path = _DEFAULT_CONFIG_PATH
+        config_path = _DEFAULT_CONFIG_PATH
 
     config_path = Path(config_path)
     if not config_path.is_file():

@@ -8,9 +8,6 @@ Uses lazy imports to avoid circular dependency with src.training.
 """
 
 from src.simulation.env_manager import EnvManager
-from src.simulation.human_facade import HumanFacade
-from src.simulation.renderer import render_highway_svg
-
 
 def __getattr__(name):
     """Lazy import TrainingFacade to break circular dependency."""
@@ -20,4 +17,4 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["EnvManager", "HumanFacade", "render_highway_svg"]
+__all__ = ["EnvManager"]

@@ -96,46 +96,24 @@ venv\Scripts\activate       # Windows
 pip install -r requirements.txt
 ```
 
-### Environment variables
 
-Create a `.env` file in the project root to control local paths and runtime flags.
-It requires no external API keys or secrets. Here is a standard configuration you can copy and paste:
-
-```ini
-# Data paths (relative to project root)
-DATA_DIR=data
-HUMAN_DEMO_DIR=data/human_demonstrations
-AUTONOMOUS_LOG_DIR=data/autonomous_logs
-CHECKPOINT_DIR=artifacts/checkpoints
-REPORT_DIR=artifacts/reports
-
-# Environment config
-ENV_CONFIG_PATH=configs/default_env.yaml
-
-# Runtime flags
-DEBUG=false
-STREAMLIT_SERVER_PORT=8501
-STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-```
-
----
 
 ## 🚀 Quick start
 
-### Run the Streamlit app
+### Run the Streamlit Dashboard (Data & Analytics)
 
-For the full dashboard (Data recording, Analytics, Training, Live Tracking):
+Streamlit is used purely as a data command center. Use it to view collected datasets, trigger model training batches, and view side-by-side performance analytics.
 ```bash
 streamlit run app.py
 ```
 
-### Run Native PyGame Modes (60 FPS)
+### Run Native PyGame Modes (Gameplay & AI Visualization)
 
-For a high-performance, real-time experience outside of Streamlit:
+For a high-performance, real-time 60 FPS experience outside of Streamlit:
 
-**1. Drive Manually (Human Training)**
+**1. Drive Manually (Data Collection)**
 ```bash
-# Drive vehicle R using your physical arrow keys
+# Drive vehicle R using your physical arrow keys to record a dataset
 python scripts/play_human.py R
 ```
 
@@ -144,6 +122,15 @@ python scripts/play_human.py R
 # Watch the trained DQN agent (R) or SARSA agent (S) drive autonomously
 python scripts/play_agent.py R
 ```
+
+**3. Multi-Agent Mode (DQN vs SARSA)**
+```bash
+# Watch BOTH agents drive in the same highway concurrently!
+python scripts/play_multi_agent.py
+```
+
+> **Pro Tip:** All native scripts support CLI arguments to change the environment difficulty dynamically:
+> `python scripts/play_agent.py R --vehicles-count 30 --vehicles-density 1.5`
 
 ### Run the full test suite
 

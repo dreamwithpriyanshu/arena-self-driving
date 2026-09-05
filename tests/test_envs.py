@@ -157,28 +157,6 @@ def test_stepping() -> None:
     print("  [OK] Environment closed cleanly")
 
 
-def test_render_data() -> None:
-    """Verify render data can be extracted."""
-    _header("Test 4: Render data")
-
-    mgr = EnvManager(render_mode="rgb_array")
-    mgr.reset(seed=42)
-
-    rd = mgr.get_render_data()
-    print(f"  [OK] ego_x={rd.ego_x:.3f}")
-    print(f"  [OK] ego_y={rd.ego_y:.3f}")
-    print(f"  [OK] ego_speed={rd.ego_speed:.1f}")
-    print(f"  [OK] ego_lane={rd.ego_lane}")
-    print(f"  [OK] neighbours={len(rd.neighbours)}")
-
-    if rd.frame is not None:
-        print(f"  [OK] frame shape: {rd.frame.shape}")
-    else:
-        print("  [--] No frame rendered (this is OK for headless)")
-
-    mgr.close()
-    print("  [OK] Render data test passed")
-
 
 def test_state_builder_edge_cases() -> None:
     """Test state builder with edge-case observations."""

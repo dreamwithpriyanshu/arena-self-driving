@@ -1,64 +1,80 @@
 import streamlit as st
+from src.data.loader import get_dataset_summary
 
 st.set_page_config(
-    page_title="Self-Driving Car Simulation",
-    page_icon="🚗",
+    page_title="Arena Self-Driving — Data Center",
+    page_icon="🏎️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("Self-Driving Car MVP")
+st.title("Data Command Center")
 
 st.markdown("""
-Welcome to the Self-Driving Car Simulation MVP.
+Welcome to the Arena Self-Driving dashboard. 
 
-This dashboard allows you to:
-- **1. Simulation**: View the raw environment and manually step through it.
-- **2. Human Training**: Record demonstrations using on-screen controls to train the agents.
-- **3. Live Tracking**: Watch the autonomous agents (DQN and SARSA) drive in real-time.
-- **4. Performance Analytics**: Compare the training metrics (Reward, Loss, TD Error) of both models.
-- **5. Train & Compare**: Warm-start from human data and run autonomous training loops.
-- **6. Docs**: Read the architecture, security, and algorithm documentation.
-
-Use the sidebar to navigate between pages.
+This interface is dedicated to **data viewing, model training, and performance analytics**. 
+To ensure maximum performance and 60FPS physics, all simulation and gameplay has been moved to native desktop windows.
 """)
 
-# Global CSS for the UI Design System (Dark asphalt)
+st.markdown("---")
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.subheader("📊 Human Demonstrations Dataset")
+    summary = get_dataset_summary()
+    
+    st.metric("Total Collected Episodes", summary["num_episodes"])
+    st.metric("Total Transitions (Steps)", f"{summary['total_transitions']:,}")
+    
+    r_count = summary["vehicles"].get("R", 0)
+    s_count = summary["vehicles"].get("S", 0)
+    
+    st.markdown(f"""
+    **Breakdown by Agent:**
+    * **R (DQN)**: {r_count} episodes
+    * **S (SARSA)**: {s_count} episodes
+    """)
+
+with col2:
+    st.subheader("🎮 How to Collect Data (Native Play)")
+    st.markdown("""
+    To record new driving demonstrations, use the native PyGame interface from your terminal. 
+    This provides a lag-free 60FPS experience and automatically saves data to the dataset.
+
+    **For DQN (R):**
+    ```bash
+    python scripts/play_human.py R
+    ```
+
+    **For SARSA (S):**
+    ```bash
+    python scripts/play_human.py S
+    ```
+    """)
+
+    st.subheader("🤖 How to Watch AI (Native Play)")
+    st.markdown("""
+    To watch the trained agents drive autonomously:
+
+    ```bash
+    python scripts/play_agent.py R
+    # or
+    python scripts/play_agent.py S
+    ```
+    """)
+
+# Global CSS for the UI Design System
 st.markdown("""
 <style>
-    /* Force dark theme elements */
     .stApp {
         background-color: #1E1E24;
         color: #E0E0E0;
     }
-    
-    /* Monospace metrics */
     [data-testid="stMetricValue"] {
         font-family: monospace;
-    }
-    
-    /* Premium Buttons */
-    div.stButton > button {
-        border-radius: 6px;
-        border: 1px solid #333;
-        background-color: #282830;
-        color: #E0E0E0;
-        transition: all 0.2s ease;
-        font-weight: 500;
-    }
-    div.stButton > button:hover {
-        background-color: #383840;
-        border-color: #00E5FF;
         color: #00E5FF;
-        transform: translateY(-1px);
-    }
-    div.stButton > button:active {
-        transform: translateY(1px);
-    }
-    
-    /* Primary Buttons */
-    div.stButton > button[data-baseweb="button"]:has(div p) {
-        /* Streamlit v1.30+ primary button styling fallback */
     }
 </style>
 """, unsafe_allow_html=True)

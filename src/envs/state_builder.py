@@ -29,8 +29,7 @@ _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "configs" / "defaul
 def _load_sarsa_bins(config_path: Optional[str | Path] = None) -> dict[str, list[float]]:
     """Load SARSA bin boundaries from the YAML config."""
     if config_path is None:
-        env_var = os.environ.get("ENV_CONFIG_PATH")
-        config_path = Path(env_var) if env_var else _DEFAULT_CONFIG_PATH
+        config_path = _DEFAULT_CONFIG_PATH
 
     config_path = Path(config_path)
     if not config_path.is_file():
