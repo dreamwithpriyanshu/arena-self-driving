@@ -1,9 +1,12 @@
 """
-src.simulation — Simulation façade.
+src.simulation — Simulation Facade.
 
-The ONLY module that Streamlit pages are allowed to import from ``src``.
+The sole entry point for Streamlit pages to interact with the environment,
+training loops, human recording, and data.
 """
 
-from src.simulation.env_manager import EnvManager, RenderData, StepResult
+from src.simulation.env_manager import EnvManager
+from src.simulation.training_facade import TrainingFacade
+from src.simulation.human_facade import HumanFacade
 
-__all__ = ["EnvManager", "RenderData", "StepResult"]
+__all__ = ["EnvManager", "TrainingFacade", "HumanFacade"]
