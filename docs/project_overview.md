@@ -37,9 +37,9 @@ This is a college-level project designed to:
 | Charts | Plotly / Altair |
 | Data format | JSONL (human demos) + PyTorch checkpoints |
 
-## Build phases
+## Build phases (Completed)
 
-The software is built in **5 steps** (see `mvp.md`) before a 7-day
+The software was built in **5 steps** (see `mvp.md`) before a 7-day
 human-training cycle begins:
 
 1. Environment, actions, and state representation
