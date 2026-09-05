@@ -11,13 +11,17 @@
 
 ## 🚗 What is this?
 
-This project compares two reinforcement learning algorithms on the same
-highway-driving task:
+![Live Tracking](tutorials/screenshots/3_live_tracking.png)
 
-| Vehicle | Algorithm | Type |
-|---------|-----------|------|
-| **R** | DQN (Deep Q-Network) | Off-policy, neural network |
-| **S** | SARSA | On-policy, tabular |
+A simulation-based comparison of two reinforcement learning algorithms
+applied to self-driving on a highway:
+
+- **Vehicle R** — trained with **DQN** (Deep Q-Network), an off-policy
+  neural-network Q-learner using experience replay.
+- **Vehicle S** — trained with **SARSA** (State-Action-Reward-State-Action),
+  an on-policy tabular learner.
+
+![Performance Analytics](tutorials/screenshots/4_performance_analytics.png)
 
 Both agents learn from **identical human demonstrations** collected in
 [HighwayEnv](https://github.com/Farama-Foundation/HighwayEnv).
