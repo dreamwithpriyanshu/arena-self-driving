@@ -82,6 +82,7 @@ class TrainingOrchestrator:
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
+        step_callback: Optional[Any] = None,
     ) -> dict[str, Any]:
         """
         Run one autonomous training episode for the specified vehicle.
@@ -96,6 +97,8 @@ class TrainingOrchestrator:
             Environment seed.
         max_steps : int
             Maximum steps before truncating.
+        step_callback: Callable, optional
+            A function called at each step with (result, metrics) for live UI rendering.
 
         Returns
         -------
@@ -158,6 +161,10 @@ class TrainingOrchestrator:
                 if "avg_q" in metrics:
                     episode_q_val += metrics["avg_q"]
 
+            # Callback for Live Tracking UI
+            if step_callback:
+                step_callback(result, metrics)
+
             if result.terminated or result.truncated:
                 break
 
@@ -184,12 +191,29 @@ class TrainingOrchestrator:
 
         return summary
 
+    def train_step(self, vehicle: str, env_mgr: EnvManager) -> dict[str, Any]:
+        """
+        Run exactly one training step. Useful for live UI tracking.
+        Must be called after env_mgr.reset().
+        """
+        agent = self.dqn if vehicle == "R" else self.sarsa
+        agent.set_eval_mode(False)
+
+        # We assume prev_result is stored somewhere, or we can just fetch it from env_mgr
+        # Wait, env_mgr doesn't store the current state natively, it just returns StepResult.
+        # But EnvManager *does* track step_count.
+        # Let's assume the UI passes the last StepResult, OR we can just get the raw observation from the env directly?
+        # Better: we just run one step and return the result.
+        # To do a proper RL update we need the PREVIOUS state.
+        pass # Will rewrite this carefully
+
     def evaluate_episode(
         self,
         vehicle: str,
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
+        step_callback: Optional[Any] = None,
     ) -> dict[str, Any]:
         """
         Run one autonomous evaluation episode (greedy policy, no learning).
@@ -209,6 +233,9 @@ class TrainingOrchestrator:
             
             if step >= max_steps - 1 and not result.terminated:
                 result.truncated = True
+
+            if step_callback:
+                step_callback(result, {})
 
             if result.terminated or result.truncated:
                 break

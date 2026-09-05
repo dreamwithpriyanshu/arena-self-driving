@@ -46,10 +46,11 @@ class TrainingFacade:
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
+        step_callback: Optional[Any] = None,
     ) -> dict[str, Any]:
         """Run a single training episode."""
         return self.orchestrator.train_episode(
-            vehicle=vehicle, env_mgr=env_mgr, seed=seed, max_steps=max_steps
+            vehicle=vehicle, env_mgr=env_mgr, seed=seed, max_steps=max_steps, step_callback=step_callback
         )
 
     def evaluate_episode(
@@ -58,10 +59,11 @@ class TrainingFacade:
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
+        step_callback: Optional[Any] = None,
     ) -> dict[str, Any]:
         """Run a single evaluation episode (greedy)."""
         return self.orchestrator.evaluate_episode(
-            vehicle=vehicle, env_mgr=env_mgr, seed=seed, max_steps=max_steps
+            vehicle=vehicle, env_mgr=env_mgr, seed=seed, max_steps=max_steps, step_callback=step_callback
         )
 
     def save_checkpoints(self) -> None:
