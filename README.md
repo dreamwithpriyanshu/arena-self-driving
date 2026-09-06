@@ -232,3 +232,6 @@ available directly:
 - [Free Render Web Service](docs/render_free_web_service.md)
 - [Project status](docs/timeline.md)
 - [Performance history](accuracy.md)
+
+## Thanku
+Made with heart by Priyanshu ❤️
