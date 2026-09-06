@@ -10,9 +10,11 @@ ENTER, then use the default Arrow profile to control the selected vehicle.
 Press `C` on setup to switch to WASD; mappings live in
 `configs/control_bindings.json`. The recorder shows the highway and traffic
 directly in the native window. Its HUD reports the held input and last applied
-action, `P` pauses without recording, and `[`/`]` adjust target speed. Once an
-episode ends, press `S` to save or `X` to discard it; ESC discards an unsafe or
-incomplete run. The HUD also exposes clickable Pause, -SPD, and +SPD buttons.
+action, `P` pauses without recording, and `+`/`-` adjust target speed. `/`
+cycles City (12 m/s), Highway (18 m/s), and Express (24 m/s) pace presets.
+Once an episode ends, press `S` to save or `X` to discard it; ESC discards an
+unsafe or incomplete run. The HUD also exposes clickable Pause, -SPD, +SPD,
+and pace-mode buttons.
 NPC count and density are selected on setup because the environment creates
 traffic when the episode begins.
 

@@ -19,6 +19,18 @@ from src.envs.actions import action_name
 from src.data.schemas import Transition
 
 
+ROAD_MODES = (("CITY", 12.0), ("HIGHWAY", 18.0), ("EXPRESS", 24.0))
+
+
+def _road_mode_name(speed: float) -> str:
+    return min(ROAD_MODES, key=lambda mode: abs(mode[1] - speed))[0]
+
+
+def _cycle_road_mode(settings: dict) -> None:
+    current = min(range(len(ROAD_MODES)), key=lambda index: abs(ROAD_MODES[index][1] - settings["target_speed"]))
+    settings["target_speed"] = ROAD_MODES[(current + 1) % len(ROAD_MODES)][1]
+
+
 def _vehicle_reward(env, vehicle, action: int) -> float:
     """Calculate the HighwayEnv reward terms for one controlled vehicle."""
     cfg = env.unwrapped.config
@@ -73,16 +85,18 @@ def _prepare_visible_agents(env) -> None:
         vehicle.target_speed = float(getattr(env, "_arena_target_speed", 18.0))
         vehicle.target_lane_index = lane_index
         vehicle.color = colour
+        vehicle.LENGTH = 6.5
+        vehicle.WIDTH = 2.6
         vehicle.on_state_update()
 
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-Agent Evaluation & Live Training Interface")
     parser.add_argument("--vehicles-count", type=int, default=20, help="Number of NPC vehicles on the road")
-    parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in steps")
+    parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in real-time seconds")
     parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier")
     parser.add_argument("--target-speed", type=float, default=18.0, help="Target speed in m/s")
-    parser.add_argument("--render-fps", type=int, default=12, help="Native playback update rate")
+    parser.add_argument("--render-fps", type=int, default=15, help="Autonomous decisions per second")
     parser.add_argument("--train", action="store_true", help="Enable live training/exploration during gameplay")
     parser.add_argument("--save", action="store_true", help="Save agent checkpoints after running (useful with --train)")
     
@@ -132,9 +146,9 @@ def main():
             lines[0],
             "",
             f"NPC vehicles: {settings['vehicles_count']}   density: {settings['vehicles_density']:.1f}",
-            f"Target speed: {settings['target_speed']:.1f} m/s   duration: {settings['duration']} steps",
+            f"Road pace: {_road_mode_name(settings['target_speed'])}   target: {settings['target_speed']:.1f} m/s   duration: {settings['duration']} s",
             "",
-            "UP/DOWN NPC   LEFT/RIGHT density   [/] speed   -/+ duration",
+            "UP/DOWN NPC   LEFT/RIGHT density   +/- speed   / road mode",
             "ENTER start   ESC quit",
         ]
         for i, line in enumerate(setup_lines):
@@ -162,14 +176,12 @@ def main():
                     settings["vehicles_density"] = min(3.0, round(settings["vehicles_density"] + 0.1, 1))
                 elif event.key == pygame.K_LEFT:
                     settings["vehicles_density"] = max(0.2, round(settings["vehicles_density"] - 0.1, 1))
-                elif event.key == pygame.K_RIGHTBRACKET:
+                elif event.key in (pygame.K_RIGHTBRACKET, pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
                     settings["target_speed"] = min(30.0, settings["target_speed"] + 1.0)
-                elif event.key == pygame.K_LEFTBRACKET:
+                elif event.key in (pygame.K_LEFTBRACKET, pygame.K_MINUS, pygame.K_KP_MINUS):
                     settings["target_speed"] = max(8.0, settings["target_speed"] - 1.0)
-                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
-                    settings["duration"] = min(1000, settings["duration"] + 30)
-                elif event.key == pygame.K_MINUS:
-                    settings["duration"] = max(30, settings["duration"] - 30)
+                elif event.key == pygame.K_SLASH:
+                    _cycle_road_mode(settings)
 
     # Close the instruction window
     pygame.display.quit()
@@ -195,10 +207,14 @@ def main():
     agent_sarsa.set_eval_mode(not args.train)
 
     # ── Run evaluation episode ───────────────────────────────────
+    decision_hz = max(1, args.render_fps)
     config_overrides = {
         "vehicles_count": settings["vehicles_count"],
         "duration": settings["duration"],
         "vehicles_density": settings["vehicles_density"],
+        "simulation_frequency": 30,
+        "policy_frequency": decision_hz,
+        "screen_height": 390,
         "controlled_vehicles": 2, # Two controlled agents!
         "observation": {
             "type": "MultiAgentObservation",
@@ -240,9 +256,20 @@ def main():
     hud_small = pygame.font.SysFont("consolas", 13)
     paused = False
     show_hud = True
+    button_bounds = {}
+
+    def set_target_speed(delta=0.0, cycle=False):
+        if cycle:
+            _cycle_road_mode(settings)
+        else:
+            settings["target_speed"] = min(30.0, max(8.0, settings["target_speed"] + delta))
+        env._arena_target_speed = settings["target_speed"]
+        for vehicle in getattr(env.unwrapped, "controlled_vehicles", []):
+            vehicle.target_speed = settings["target_speed"]
 
     def draw_hud(actions, vehicles, terminated, truncated):
         """Draw live controls and per-agent telemetry on the native window."""
+        button_bounds.clear()
         if not show_hud:
             return
         surface = pygame.display.get_surface()
@@ -260,7 +287,7 @@ def main():
         surface.blit(hud_font.render(title, True, (0, 229, 255)), (12, height - 105))
         surface.blit(
             hud_small.render(
-                "SPACE pause/resume   H HUD   S save checkpoints   ESC quit",
+                f"SPACE/P pause  +/- speed  / mode ({_road_mode_name(settings['target_speed'])})  H HUD  S save  ESC quit",
                 True,
                 (210, 210, 215),
             ),
@@ -282,14 +309,24 @@ def main():
                 f"reward={total_reward[index]:>7.2f} lane={lane} speed={speed:>5} m/s {status}"
             )
             surface.blit(hud_small.render(rows[-1], True, colour), (12, height - 62 + index * 18))
+        accent = (255, 196, 77) if paused else (0, 229, 255)
+        x = width - 12
+        for button_id, label in reversed((("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD"), ("mode", _road_mode_name(settings["target_speed"])))):
+            button = pygame.Rect(x - 76, height - 108, 70, 22)
+            pygame.draw.rect(surface, (53, 62, 76), button, border_radius=3)
+            pygame.draw.rect(surface, accent, button, width=1, border_radius=3)
+            text = hud_small.render(label, True, (238, 238, 240))
+            surface.blit(text, text.get_rect(center=button.center))
+            button_bounds[button_id] = button
+            x -= 82
 
     try:
-        for step in range(settings["duration"]):
+        for step in range(settings["duration"] * decision_hz):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     raise KeyboardInterrupt
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
+                    if event.key in (pygame.K_SPACE, pygame.K_p):
                         paused = not paused
                     elif event.key == pygame.K_h:
                         show_hud = not show_hud
@@ -297,6 +334,21 @@ def main():
                         agent_dqn.save(checkpoint_dir)
                         agent_sarsa.save(checkpoint_dir)
                         print("Checkpoints saved from GUI control.")
+                    elif event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS, pygame.K_RIGHTBRACKET):
+                        set_target_speed(1.0)
+                    elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS, pygame.K_LEFTBRACKET):
+                        set_target_speed(-1.0)
+                    elif event.key == pygame.K_SLASH:
+                        set_target_speed(cycle=True)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if button_bounds.get("pause", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        paused = not paused
+                    elif button_bounds.get("slower", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        set_target_speed(-1.0)
+                    elif button_bounds.get("faster", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        set_target_speed(1.0)
+                    elif button_bounds.get("mode", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        set_target_speed(cycle=True)
             keys = pygame.key.get_pressed()
             if keys[pygame.K_ESCAPE]:
                 raise KeyboardInterrupt
@@ -426,7 +478,7 @@ def main():
             clock.tick(max(1, args.render_fps))
 
             # If either agent crashes, stop stepping and show the result HUD.
-            if all(terminated_tuple) or any(truncated_tuple) or step >= settings["duration"] - 1:
+            if all(terminated_tuple) or any(truncated_tuple) or step >= settings["duration"] * decision_hz - 1:
                 break
 
         print(f"\nEpisode Ended!")

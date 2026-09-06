@@ -17,6 +17,7 @@ from src.human.episode_manager import EpisodeManager
 
 RENDER_FPS = 60
 DECISION_HZ = 15
+ROAD_MODES = (("CITY", 12.0), ("HIGHWAY", 18.0), ("EXPRESS", 24.0))
 PYGAME_KEYS = {
     "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
     "up": pygame.K_UP, "down": pygame.K_DOWN,
@@ -29,6 +30,18 @@ def profile_summary(profile: dict[Action, tuple[str, ...]]) -> str:
     def keys(action: Action) -> str:
         return "/".join(key.upper() for key in profile[action]) or "-"
     return f"{keys(Action.FASTER)} accelerate   {keys(Action.SLOWER)} brake   {keys(Action.LANE_LEFT)}/{keys(Action.LANE_RIGHT)} lanes"
+
+
+def cycle_road_mode(settings: dict) -> str:
+    """Select the next realistic target-speed preset."""
+    current = min(range(len(ROAD_MODES)), key=lambda index: abs(ROAD_MODES[index][1] - settings["target_speed"]))
+    name, speed = ROAD_MODES[(current + 1) % len(ROAD_MODES)]
+    settings["target_speed"] = speed
+    return name
+
+
+def road_mode_name(speed: float) -> str:
+    return min(ROAD_MODES, key=lambda mode: abs(mode[1] - speed))[0]
 
 
 def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tuple[str, ...]]], profile_name: str) -> tuple[bool, str]:
@@ -48,8 +61,8 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
             (f"Traffic: {settings['vehicles_count']} NPCs  |  density: {settings['vehicles_density']:.1f}", (235, 235, 235), font),
             (f"Initial speed: {settings['target_speed']:.1f} m/s  |  duration: {settings['duration']} s", (235, 235, 235), font),
             (f"Controls: {profile_name.upper()}  -  {profile_summary(profiles[profile_name])}", (255, 166, 77), font),
-            ("UP/DOWN NPCs  LEFT/RIGHT density  [/] speed  -/+ duration  C profile", (175, 182, 194), font),
-            ("In drive: P pause  H HUD  [/] target speed  ESC discard", (175, 182, 194), font),
+            ("UP/DOWN NPCs  LEFT/RIGHT density  +/- speed  / road mode  C profile", (175, 182, 194), font),
+            ("In drive: P pause  H HUD  +/- speed  / road mode  ESC discard", (175, 182, 194), font),
             ("ENTER start    ESC quit", (0, 229, 255), font),
         ]
         for index, (line, color, line_font) in enumerate(lines):
@@ -74,14 +87,12 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
                     settings["vehicles_density"] = min(3.0, round(settings["vehicles_density"] + 0.1, 1))
                 elif event.key == pygame.K_LEFT:
                     settings["vehicles_density"] = max(0.2, round(settings["vehicles_density"] - 0.1, 1))
-                elif event.key == pygame.K_RIGHTBRACKET:
+                elif event.key in (pygame.K_RIGHTBRACKET, pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
                     settings["target_speed"] = min(30.0, settings["target_speed"] + 1.0)
-                elif event.key == pygame.K_LEFTBRACKET:
+                elif event.key in (pygame.K_LEFTBRACKET, pygame.K_MINUS, pygame.K_KP_MINUS):
                     settings["target_speed"] = max(8.0, settings["target_speed"] - 1.0)
-                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
-                    settings["duration"] = min(600, settings["duration"] + 30)
-                elif event.key == pygame.K_MINUS:
-                    settings["duration"] = max(30, settings["duration"] - 30)
+                elif event.key == pygame.K_SLASH:
+                    cycle_road_mode(settings)
         clock.tick(RENDER_FPS)
 
 
@@ -158,9 +169,9 @@ def main() -> None:
                  f"reward={mgr.total_reward:7.2f}  lane={result.lane_index}  "
                  f"speed={result.speed:5.1f} m/s  target={settings['target_speed']:4.1f}")
         surface.blit(hud_font.render(stats, True, (238, 238, 240)), (12, height - 60))
-        controls = f"{profile_name.upper()} drive | click controls or P and [/] | H HUD | ESC discard"
+        controls = f"{profile_name.upper()} drive | click controls or P +/- / | H HUD | ESC discard"
         surface.blit(hud_font.render(controls, True, (185, 191, 204)), (12, height - 34))
-        labels = [("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD")]
+        labels = [("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD"), ("mode", road_mode_name(settings["target_speed"]))]
         x = width - 12
         for button_id, label in reversed(labels):
             button = pygame.Rect(x - 76, height - 88, 70, 22)
@@ -187,10 +198,13 @@ def main() -> None:
                         decision_elapsed = 0.0
                     elif event.key == pygame.K_h:
                         show_hud = not show_hud
-                    elif event.key == pygame.K_LEFTBRACKET:
+                    elif event.key in (pygame.K_LEFTBRACKET, pygame.K_MINUS, pygame.K_KP_MINUS):
                         adjust_target_speed(-1.0)
-                    elif event.key == pygame.K_RIGHTBRACKET:
+                    elif event.key in (pygame.K_RIGHTBRACKET, pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
                         adjust_target_speed(1.0)
+                    elif event.key == pygame.K_SLASH:
+                        cycle_road_mode(settings)
+                        adjust_target_speed(0.0)
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if button_bounds.get("pause", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         paused = not paused
@@ -199,6 +213,9 @@ def main() -> None:
                         adjust_target_speed(-1.0)
                     elif button_bounds.get("faster", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         adjust_target_speed(1.0)
+                    elif button_bounds.get("mode", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        cycle_road_mode(settings)
+                        adjust_target_speed(0.0)
 
             keys = pygame.key.get_pressed()
             pressed = {name for name, keycode in PYGAME_KEYS.items() if keys[keycode]}

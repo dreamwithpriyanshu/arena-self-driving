@@ -20,9 +20,9 @@ control profile before pressing ENTER. In the highway window:
 - Arrow Left and Right change lanes.
 - Press `C` on the setup screen to switch to the WASD profile; both profiles
   are configurable in `configs/control_bindings.json`.
-- `P` pauses cleanly without recording a transition. `[` and `]` adjust target
-  speed during the drive; the same pause and speed controls are clickable in
-  the live HUD.
+- `P` pauses cleanly without recording a transition. `+` and `-` adjust target
+  speed during the drive, and `/` cycles City (12 m/s), Highway (18 m/s), and
+  Express (24 m/s) pace presets; matching controls are clickable in the HUD.
 - ESC discards the active episode.
 
 The HUD displays the currently held action(s) and the last discrete action

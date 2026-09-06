@@ -78,7 +78,8 @@ Controls in the PyGame window:
 - `C` (setup): switch between the Arrow and WASD profiles
 - `P`: pause/resume without stepping or recording a transition
 - `H`: hide/show live telemetry
-- `[` / `]`: lower/raise the live target speed
+- `+` / `-`: raise/lower the live target speed (`[` / `]` are aliases)
+- `/`: cycle City (12 m/s), Highway (18 m/s), and Express (24 m/s) pace presets
 - `S`: save a completed demonstration only
 - `X`: discard a completed demonstration only
 - `ESC`: discard/close the current run
@@ -107,10 +108,11 @@ Positional arguments:
 
 Options:
 - `--vehicles-count N` : Number of NPC vehicles (default: 15)
-- `--duration N` : Max duration in steps (default: 120)
+- `--duration N` : Max duration in real-time seconds (default: 120)
 - `--vehicles-density D` : Traffic density multiplier (default: 1.0)
 - `--train` : Enable live updates (agent will explore and call update())
 - `--save` : Save checkpoints to `artifacts/checkpoints` after the run
+- `--target-speed S` : Initial target speed in m/s (default: 18.0)
 
 Examples:
 - Watch trained DQN agent (greedy evaluation):
@@ -128,6 +130,8 @@ Examples:
 Notes:
 - When `--train` is not provided, the agent runs in evaluation (greedy) mode.
 - If no checkpoint exists the agent will act randomly; use `--save` with `--train` to persist learned weights.
+- `SPACE`/`P` pauses, `+`/`-` changes speed, `/` cycles pace presets, and `H`
+  toggles the live HUD. The viewer stays open after a crash until `ESC` closes it.
 
 
 scripts/play_multi_agent.py
@@ -142,7 +146,7 @@ python scripts/play_multi_agent.py [options]
 
 Options:
 - `--vehicles-count N` : Number of NPC vehicles (default: 20)
-- `--duration N` : Max duration in steps (default: 120)
+- `--duration N` : Max duration in real-time seconds (default: 120)
 - `--vehicles-density D` : Traffic density multiplier (default: 1.0)
 - `--target-speed S` : Target speed in m/s (default: 18.0)
 - `--train` : Enable live training for both agents
@@ -156,7 +160,8 @@ python scripts/play_multi_agent.py --vehicles-count 30 --duration 300 --train --
 
 Notes & robustness:
 - The native window shows live R/S actions, cumulative rewards, lanes, speeds, and terminal status.
-- `SPACE` pauses/resumes, `H` toggles the HUD, `S` saves both checkpoints immediately, and `ESC` quits.
+- `SPACE`/`P` pauses/resumes, `+`/`-` changes both agents' target speed, `/`
+  cycles pace presets, `H` toggles the HUD, `S` saves both checkpoints, and `ESC` quits.
 - Before starting, the GUI adjusts NPC count, density, target speed, and duration with the displayed controls.
 - A crashed car stops taking decisions; the other continues until both cars crash or the duration limit is reached.
 - The multi-agent script accepts observations either as full kinematics matrices `(V, F)` or ego-only vectors `(F,)`. Ego-only observations are automatically expanded to `(V, F)` by padding neighbour rows with zeros.

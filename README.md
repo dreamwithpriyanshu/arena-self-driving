@@ -102,13 +102,15 @@ and `ESC` closes after a crash or timeout. Human mode samples held keys at
 and the action applied. Press `S` to save, or `X` to discard, only after a
 recording has completed.
 
-In human mode, the HUD also has clickable **Pause**, **- SPD**, and **+ SPD**
-controls. NPC count and density are chosen on the setup screen because they
-are created when the HighwayEnv episode resets.
+All native modes use the same controls: `+`/`-` change target speed, `/` cycles
+City (12 m/s), Highway (18 m/s), and Express (24 m/s) pace presets, and the
+HUD exposes matching clickable controls. NPC count and density are chosen on
+the setup screen because they are created when the HighwayEnv episode resets.
 
 Before either native session starts, the GUI provides controls for NPC vehicle
 count, traffic density, target speed, and episode duration. Defaults are slower
-than the original runtime: 18 m/s target speed and 12 FPS multi-agent playback.
+than the original runtime: 18 m/s target speed and 15 decisions per second in
+multi-agent playback.
 In multi-agent mode, one crashed car no longer ends the run; both cars are
 allowed to reach the crashed state.
 
