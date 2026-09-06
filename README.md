@@ -30,22 +30,10 @@ HTML, CSS, and JavaScript files in `frontend/`.
 
 ## Deploy to Render
 
-Use the included [`render.yaml`](render.yaml) as a Blueprint. It installs the
-headless Python dependencies, binds FastAPI to Render's public port, and mounts a
-persistent disk at `/var/data`. `ARENA_STORAGE_DIR=/var/data` keeps human
-demonstrations, checkpoints, and all run history across deploys and restarts.
-Render is pinned to Python 3.13.7 because `highway-env` requires PyGame and
-Python 3.14 may force an SDL source build.
-Persistent disks require a paid Render instance and are attached to one service
-instance; do not scale this service horizontally unless storage is moved to
-object storage or a database.
-
-Render is a headless server, so a human cannot record keyboard demonstrations
-there. The **SARSA playback** button uses a headless evaluation run instead of
-opening PyGame, and saves its metrics in run history. Training, warm-starting
-from stored demonstration files, live metrics, checkpoints, and saved history
-work through the browser API. Use the local workflow for arrow-key recording,
-then copy validated JSONL files into the mounted storage when needed.
+For the free plan, follow [Free Render Web Service](docs/render_free_web_service.md).
+It uses the headless requirements, Python 3.13.7, Render's `$PORT`, and temporary
+`/tmp/arena-data` storage. Render is headless: human keyboard demonstrations
+remain local-only, while training and SARSA evaluation run through the browser.
 
 ## Sharing an improved model through GitHub
 
@@ -127,6 +115,5 @@ available directly:
 - [FastAPI control surface](docs/backend_notes.md)
 - [Security and data notes](docs/security_notes.md)
 - [UI design](docs/ui_design_system.md)
-- [Render deployment](docs/render_deployment.md)
 - [Free Render Web Service](docs/render_free_web_service.md)
 - [Project status](docs/timeline.md)

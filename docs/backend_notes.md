@@ -10,9 +10,10 @@ It listens on `127.0.0.1:8000` only. Open `http://127.0.0.1:8000` in the same
 machine's browser. Do not expose this server to a network without adding
 authentication, TLS, and an authorization design for process launch requests.
 
-For Render, use the `render.yaml` Blueprint. Render is headless: the human
-PyGame endpoint returns `501`, while the agent endpoint starts a one-episode
-headless evaluation and saves its metrics as a normal run.
+For Render, use the free Web Service settings in
+`render_free_web_service.md`. Render is headless: the human PyGame endpoint
+returns `501`, while the agent endpoint starts a one-episode headless
+evaluation and saves its metrics as a normal run.
 
 Render training does not push files to GitHub. The persistent disk belongs to
 the Render service; publishing a checkpoint to GitHub is an explicit download,

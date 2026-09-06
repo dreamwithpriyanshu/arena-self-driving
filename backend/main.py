@@ -36,7 +36,6 @@ DOCUMENTS = {
     "backend": "backend_notes.md",
     "timeline": "timeline.md",
     "ui": "ui_design_system.md",
-    "render": "render_deployment.md",
     "render-free": "render_free_web_service.md",
 }
 
@@ -133,6 +132,13 @@ app = FastAPI(title="Arena SARSA Training Control", docs_url=None, redoc_url=Non
 ensure_storage_dirs()
 
 
+def worker_output() -> tuple[object, object]:
+    """Keep hosted worker errors visible while avoiding local console noise."""
+    if os.environ.get("RENDER") == "true":
+        return None, None
+    return subprocess.DEVNULL, subprocess.DEVNULL
+
+
 class NativeSessionRegistry:
     """Tracks the desktop PyGame windows launched from the local frontend."""
 
@@ -160,7 +166,7 @@ class NativeSessionRegistry:
             try:
                 process = subprocess.Popen(
                     command, cwd=PROJECT_ROOT, shell=False,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    stdout=worker_output()[0], stderr=worker_output()[1],
                 )
             except OSError as exc:
                 history_dir.rmdir()
@@ -247,13 +253,14 @@ def start_training(request: TrainingRequest) -> dict[str, object]:
     history_dir = RUNS_DIR / run_id
     history_dir.mkdir(parents=True, exist_ok=False)
     creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    stdout, stderr = worker_output()
     try:
         process = subprocess.Popen(
             training_command(request, history_dir),
             cwd=PROJECT_ROOT,
             shell=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=stdout,
+            stderr=stderr,
             creationflags=creation_flags,
         )
     except OSError as exc:

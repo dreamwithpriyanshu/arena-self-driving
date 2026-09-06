@@ -4,3 +4,4 @@ highway-env>=1.9,<1.13
 gymnasium>=0.29,<1.0
 numpy>=1.24
 pyyaml>=6.0,<7.0
+websockets>=12.0,<16.0
