@@ -38,8 +38,14 @@ A best-effort `build_raw_state_from_env` reconstruction helper was added for
 cases where the environment exposes vehicle objects directly.
 
 Tests in `tests/test_envs.py` were updated to assert the new expansion behaviour
-instead of expecting a `ValueError`. The checkpoint round-trip test was fixed to
-use a project-local directory (avoiding Windows `tmp_path` permission errors).
+instead of expecting a `ValueError`. This relaxation is deliberate: an
+ego-only observation is a supported shape emitted by some environment
+configurations, so rejecting it would make training brittle. The expansion
+preserves the ego features and explicitly warns that neighbour rows are
+zero-padded; callers that require neighbour data must request full Kinematics
+observations or use the best-effort environment reconstruction helper. The
+checkpoint round-trip test was fixed to use a project-local directory (avoiding
+Windows `tmp_path` permission errors).
 
 Stale DQN/two-agent references in docstrings and comments were cleaned out
 across `state_builder.py`, `actions.py`, and `episode_manager.py`.

@@ -201,6 +201,12 @@ def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> 
         mat = np.zeros((vc, features), dtype=np.float32)
         for i, r in enumerate(rows[:vc]):
             mat[i, :len(r)] = r
+        if len(rows) < vc:
+            logger.warning(
+                "build_raw_state_from_env: reconstructed %d of %d vehicle rows; "
+                "zero-padding the remaining %d row(s).",
+                len(rows), vc, vc - len(rows),
+            )
         return mat
     except Exception:
         logger.warning(
