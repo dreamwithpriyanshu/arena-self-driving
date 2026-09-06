@@ -165,6 +165,12 @@ class EpisodeManager:
         """
         return self.act_action(self._keyboard.key_to_action(key))
 
+    def set_max_steps(self, max_steps: int) -> None:
+        """Update the episode limit before it reaches its current boundary."""
+        if max_steps < 1:
+            raise ValueError("max_steps must be positive")
+        self._max_steps = max_steps
+
     def act_action(self, action: int) -> StepResult:
         """Apply a validated discrete action and record its transition."""
         if not self._episode_active:

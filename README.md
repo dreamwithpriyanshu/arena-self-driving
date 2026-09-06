@@ -109,9 +109,10 @@ and state representation.
 | Item | Location |
 |---|---|
 | Human demonstrations | `data/human_demonstrations/*.jsonl` |
-| SARSA checkpoint | `artifacts/checkpoints/sarsa_q_table.npy` |
+Published SARSA baseline | `published/checkpoints/sarsa_q_table.npy` |
+Local/Render SARSA checkpoint | `$ARENA_STORAGE_DIR/artifacts/checkpoints/sarsa_q_table.npy` |
 | Browser-started run history | `artifacts/runs/<browser-run-id>/training_history_<run>.jsonl` |
-| Browser-started run metadata | `artifacts/runs/<browser-run-id>/training_history_<run>.meta.json` |
+Browser-started run metadata | `artifacts/runs/<browser-run-id>/training_history_<run>.meta.json` |
 | Earlier command-line history | `artifacts/training_history_<run>.jsonl` |
 
 `run-id` is an opaque identifier created by the backend. It keeps each

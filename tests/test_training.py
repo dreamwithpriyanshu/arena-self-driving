@@ -18,6 +18,7 @@ import sys
 import os
 import shutil
 import ast
+import json
 from pathlib import Path
 
 # Force UTF-8 output on Windows
@@ -82,7 +83,13 @@ def test_orchestrator_e2e() -> None:
     human_mgr.start(vehicle="S", seed=42)
     human_mgr.act("arrowup")
     human_mgr.act("arrowleft")
-    human_mgr.save()
+    saved_demo = human_mgr.save()
+    legacy_demo = test_data_dir / "legacy_R_demo.jsonl"
+    lines = saved_demo.read_text(encoding="utf-8").splitlines()
+    metadata = json.loads(lines[0])
+    metadata["vehicle"] = "legacy"
+    lines[0] = json.dumps(metadata)
+    legacy_demo.write_text("\n".join(lines) + "\n", encoding="utf-8")
     
     # 3. Initialize Orchestrator
     sarsa = SARSAAgent()
@@ -127,5 +134,3 @@ def test_orchestrator_e2e() -> None:
     # Cleanup
     shutil.rmtree(test_data_dir)
     shutil.rmtree(test_checkpoint_dir)
-
-

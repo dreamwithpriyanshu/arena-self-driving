@@ -58,12 +58,21 @@ class TrainingOrchestrator:
             logger.error("Failed to load demonstrations: %s", e)
             return {"loaded": 0, "sarsa_warm_started": 0}
 
-        if not episodes:
+        sarsa_episodes = [
+            (metadata, episode)
+            for metadata, episode in episodes
+            if metadata.vehicle == "S"
+        ]
+        ignored = len(episodes) - len(sarsa_episodes)
+        if ignored:
+            logger.warning("Ignoring %d non-S demonstration episode(s).", ignored)
+
+        if not sarsa_episodes:
             logger.warning("No valid transitions found for warm start.")
             return {"loaded": 0, "sarsa_warm_started": 0}
 
-        transitions = [transition for _metadata, episode in episodes for transition in episode]
-        for _metadata, episode in episodes:
+        transitions = [transition for _metadata, episode in sarsa_episodes for transition in episode]
+        for _metadata, episode in sarsa_episodes:
             for index, transition in enumerate(episode):
                 next_action = episode[index + 1].action if index + 1 < len(episode) else None
                 self.sarsa.update(transition, next_action=next_action)

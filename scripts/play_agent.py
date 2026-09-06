@@ -112,13 +112,14 @@ def main() -> None:
         print(f"No SARSA checkpoint found ({error}). Agent will act randomly.")
     agent.set_eval_mode(not args.train)
 
-    env_mgr = EnvManager(render_mode="human", config_overrides={
+    env_mgr = EnvManager(render_mode="rgb_array", config_overrides={
         "vehicles_count": settings["vehicles_count"], "vehicles_density": settings["vehicles_density"],
         "duration": settings["duration"], "simulation_frequency": 30, "policy_frequency": POLICY_HZ,
         "screen_height": 390,
     })
     result = env_mgr.reset()
     tune_vehicle(env_mgr, settings["target_speed"])
+    pygame.display.set_mode((600, 390))
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 15)
     paused, show_hud, elapsed = False, True, 0.0
@@ -131,6 +132,7 @@ def main() -> None:
         else:
             settings["target_speed"] = min(30.0, max(8.0, settings["target_speed"] + delta))
         for driver in getattr(env_mgr._env.unwrapped, "controlled_vehicles", []):
+            driver.speed = settings["target_speed"]
             driver.target_speed = settings["target_speed"]
 
     def set_epsilon(delta: float) -> None:
@@ -161,6 +163,13 @@ def main() -> None:
             surface.blit(font.render(label, True, (238, 238, 240)), font.render(label, True, (238, 238, 240)).get_rect(center=button.center))
             button_bounds[button_id] = button
             x -= 82
+
+    def render_scene() -> None:
+        frame = env_mgr._env.render()
+        surface = pygame.display.get_surface()
+        if frame is not None and surface is not None:
+            image = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+            surface.blit(image, (0, 0))
 
     try:
         while not (result.terminated or result.truncated):
@@ -210,6 +219,7 @@ def main() -> None:
                             updates += 1
                             loss_total += float(metrics.get("loss", metrics.get("td_error", 0.0)))
                     elapsed -= 1 / POLICY_HZ
+            render_scene()
             draw_hud("PAUSED" if paused else "DRIVING")
             pygame.display.flip()
         print(f"Episode ended after {env_mgr.step_count} steps; reward={env_mgr.total_reward:.2f}.")

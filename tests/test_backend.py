@@ -11,7 +11,7 @@ from backend.main import TrainingRequest, app, training_command
 def test_only_sarsa_model_is_accepted() -> None:
     assert TrainingRequest().agent_type == "S"
     with pytest.raises(ValidationError):
-        TrainingRequest(agent_type="R")  # type: ignore[arg-type]
+        TrainingRequest(agent_type="legacy-model")  # type: ignore[arg-type]
 
 
 def test_training_command_is_fixed_argument_vector() -> None:
