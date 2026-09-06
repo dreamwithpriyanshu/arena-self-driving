@@ -37,5 +37,41 @@ form.addEventListener('submit', async event => { event.preventDefault(); const d
 stopButton.addEventListener('click', async () => { if (activeRunId) await fetch(`/training/stop/${activeRunId}`, {method:'POST'}); });
 async function loadRuns() { const response = await fetch('/runs'); const runs = await response.json(); const target = document.querySelector('#runs'); target.replaceChildren(); if (!runs.length) { target.textContent = 'No completed runs yet.'; return; } runs.forEach(run => { const button = document.createElement('button'); button.className = 'run'; button.textContent = `${new Date(run.created_at * 1000).toLocaleString()} — ${run.args?.episodes ?? '?'} episodes`; button.onclick = async () => { const history = await fetch(`/runs/${run.artifact_run_id}/metrics`); metrics = await history.json(); drawCharts(); metricsText.textContent = `Loaded ${metrics.length} recorded episodes.`; }; target.append(button); }); }
 async function loadDemonstrations() { const response = await fetch('/demonstrations/summary'); const summary = await response.json(); document.querySelector('#demo-summary').textContent = `${summary.num_episodes} saved demonstrations · ${summary.total_transitions} transitions · total reward ${Number(summary.total_reward).toFixed(2)}`; }
-async function loadDocumentation() { const response = await fetch('/documentation'); const documents = await response.json(); const list = document.querySelector('#doc-list'); for (const doc of documents) { const button = document.createElement('button'); button.className = 'doc-button'; button.textContent = doc.filename.replace('.md','').replaceAll('_',' '); button.onclick = async () => { const page = await fetch(`/documentation/${doc.id}`); const data = await page.json(); document.querySelector('#doc-content').textContent = data.content || data.detail; document.querySelectorAll('.doc-button').forEach(item => item.classList.remove('active')); button.classList.add('active'); }; list.append(button); } list.querySelector('button')?.click(); }
+function escapeHtml(value) { return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+function renderMarkdown(markdown) {
+  const lines = markdown.split(/\r?\n/), output = [], inline = value => value
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  let inCode = false, inList = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    const line = escapeHtml(rawLine);
+    if (line.startsWith('```')) { if (inList) { output.push('</ul>'); inList = false; } output.push(inCode ? '</code></pre>' : '<pre><code>'); inCode = !inCode; continue; }
+    if (inCode) { output.push(line); continue; }
+    if (!line.trim()) { if (inList) { output.push('</ul>'); inList = false; } continue; }
+    if (rawLine.trim().startsWith('|') && lines[index + 1]?.match(/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/)) {
+      if (inList) { output.push('</ul>'); inList = false; }
+      const rows = [];
+      index += 2;
+      while (index < lines.length && lines[index].trim().startsWith('|')) {
+        rows.push(lines[index].trim().replace(/^\||\|$/g, '').split('|').map(cell => inline(escapeHtml(cell.trim()))));
+        index += 1;
+      }
+      const header = rawLine.trim().replace(/^\||\|$/g, '').split('|').map(cell => inline(escapeHtml(cell.trim())));
+      output.push(`<table><thead><tr>${header.map(cell => `<th>${cell}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+      index -= 1;
+      continue;
+    }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) { if (inList) { output.push('</ul>'); inList = false; } output.push(`<h${heading[1].length}>${inline(heading[2])}</h${heading[1].length}>`); continue; }
+    const item = line.match(/^(?:[-*]|\d+\.)\s+(.+)$/);
+    if (item) { if (!inList) { output.push('<ul>'); inList = true; } output.push(`<li>${inline(item[1])}</li>`); continue; }
+    if (inList) { output.push('</ul>'); inList = false; }
+    output.push(`<p>${inline(line)}</p>`);
+  }
+  if (inList) output.push('</ul>');
+  if (inCode) output.push('</code></pre>');
+  return output.join('');
+}
+async function loadDocumentation() { const response = await fetch('/documentation'); const documents = await response.json(); const list = document.querySelector('#doc-list'); for (const doc of documents) { const button = document.createElement('button'); button.className = 'doc-button'; button.textContent = doc.filename.replace('.md','').replaceAll('_',' '); button.onclick = async () => { const page = await fetch(`/documentation/${doc.id}`); const data = await page.json(); document.querySelector('#doc-content').innerHTML = data.content ? renderMarkdown(data.content) : `<p>${escapeHtml(data.detail || 'Documentation unavailable.')}</p>`; document.querySelectorAll('.doc-button').forEach(item => item.classList.remove('active')); button.classList.add('active'); }; list.append(button); } list.querySelector('button')?.click(); }
 loadRuns(); loadDemonstrations(); loadDocumentation(); drawCharts();

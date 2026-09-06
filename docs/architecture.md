@@ -1,15 +1,17 @@
 # Architecture
 
-Arena Self-Driving has one learning path and two local presentation surfaces.
+Arena Self-Driving has one learning path and local or hosted presentation
+surfaces.
 
 ```text
 Human drive button -> native PyGame recorder -> validated JSONL demonstrations
                                                 |
 Browser training form -> FastAPI -> scripts/train.py -> SARSA Q-table
                            |                         -> per-run JSONL metrics
-                           +-> WebSocket -> live browser charts
+                           +-> WebSocket/polling -> live browser charts
 
 Agent play button -> native PyGame viewer -> saved SARSA Q-table
+                  -> Render: headless evaluation -> saved run metrics
 ```
 
 ## Responsibilities
@@ -23,21 +25,21 @@ Agent play button -> native PyGame viewer -> saved SARSA Q-table
 | `src/agents/sarsa.py` | The sole tabular SARSA policy and checkpoint persistence. |
 | `src/training/` | Warm start, training/evaluation episode orchestration. |
 | `scripts/` | Headless trainer and native PyGame entry points. |
-| `backend/` | Local-only API, subprocess ownership, live metric streaming, static frontend hosting. |
+| `backend/` | FastAPI API, subprocess ownership, live metric streaming, static frontend hosting. |
 | `frontend/` | No-build HTML, CSS, and JavaScript dashboard. |
 
 ## Local UI model
 
 The browser is the control surface for demonstrations, playback, training,
-analytics, and project documentation. Human driving and policy playback still
-run in native PyGame windows because they require desktop keyboard input and
-rendering. The browser launches those fixed local scripts; it does not embed a
-simulator window.
+analytics, and project documentation. Locally, human driving and policy
+playback run in native PyGame windows. On headless Render, human driving is
+unavailable and policy playback becomes a one-episode headless evaluation.
 
 ## Evidence model
 
-Human demonstrations are stored in `data/human_demonstrations/`. Browser
-training requests receive a backend-generated ID and write under
-`artifacts/runs/<browser-run-id>/`. Each directory contains a timestamped JSONL
-history file and matching metadata file. The API also reads compatible older
-history directly under `artifacts/`.
+Human demonstrations are stored under the configured storage root in
+`data/human_demonstrations/`. Browser training requests receive a backend-
+generated ID and write under `artifacts/runs/<browser-run-id>/`. Each directory
+contains a timestamped JSONL history file and matching metadata file. The
+published GitHub baseline seeds a new storage root without overwriting an
+existing checkpoint.

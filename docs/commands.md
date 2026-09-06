@@ -16,11 +16,12 @@ python -m backend.main
 
 Open `http://127.0.0.1:8000`, then:
 
-1. Choose **Open human drive** to collect and save arrow-key demonstrations.
+1. Locally, choose **Open human drive** to collect and save arrow-key demonstrations.
 2. Enable **Warm-start from saved demonstrations** if desired.
 3. Configure the SARSA form and start a run.
 4. Read reward, steps, epsilon, and TD-error charts as episodes complete.
-5. Choose **Open agent play** to view the latest saved checkpoint.
+5. Locally, choose **Open agent play** to view the checkpoint; on Render, it
+   starts a headless evaluation and displays the result in Analytics.
 
 ## Direct local tools
 

@@ -14,6 +14,7 @@ from src.agents.sarsa import SARSAAgent
 from src.data.schemas import Transition
 from src.envs.actions import action_name
 from src.simulation.env_manager import EnvManager
+from src.storage import checkpoints_dir, ensure_storage_dirs
 
 
 RENDER_FPS = 60
@@ -102,7 +103,8 @@ def main() -> None:
     pygame.display.quit()
 
     agent = SARSAAgent()
-    checkpoint_dir = Path("artifacts/checkpoints")
+    ensure_storage_dirs()
+    checkpoint_dir = checkpoints_dir()
     try:
         agent.load(checkpoint_dir)
         print("SARSA checkpoint loaded.")

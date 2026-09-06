@@ -15,10 +15,11 @@ FastAPI serves a responsive, no-build frontend with four sections:
 
 | Section | Purpose |
 |---|---|
-| Drive | Launch human demonstration or SARSA playback and show demonstration totals. |
+| Drive | Launch local human demonstration or local/hosted SARSA playback and show totals. |
 | Train | Configure the sole SARSA model, start or stop one run, and view state. |
 | Analytics | Plot reward, survival steps, epsilon, and TD error for live or saved runs. |
 | Documentation | Read the project Markdown notes without leaving the workbench. |
 
 The frontend deliberately has no Node.js build step or third-party chart
-runtime. Canvas charts keep the local control surface lightweight.
+runtime. Canvas charts keep the control surface lightweight. Hosted playback
+uses the same charts for headless evaluation results.

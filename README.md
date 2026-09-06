@@ -49,7 +49,7 @@ git push
 ```
 
 The tracked `published/` baseline is automatically copied into writable storage
-on a fresh install or Render disk. Existing storage is never overwritten, so a
+on a fresh install or Render instance. Existing storage is never overwritten, so a
 user who has already trained keeps their newer checkpoint and history. Each
 published update must be committed and pushed explicitly.
 

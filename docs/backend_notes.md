@@ -15,8 +15,8 @@ For Render, use the free Web Service settings in
 returns `501`, while the agent endpoint starts a one-episode headless
 evaluation and saves its metrics as a normal run.
 
-Render training does not push files to GitHub. The persistent disk belongs to
-the Render service; publishing a checkpoint to GitHub is an explicit download,
+Render training does not push files to GitHub. Hosted files are temporary on
+the free plan; publishing a checkpoint to GitHub is an explicit download,
 `publish_model.py`, commit, and push workflow.
 
 ## API contract
@@ -24,7 +24,7 @@ the Render service; publishing a checkpoint to GitHub is an explicit download,
 | Endpoint | Purpose |
 |---|---|
 | `POST /sessions/human/start` | Open the native PyGame human demonstration recorder. |
-| `POST /sessions/agent/start` | Open the native PyGame SARSA playback viewer. |
+| `POST /sessions/agent/start` | Open local PyGame playback or start hosted headless evaluation. |
 | `GET /demonstrations/summary` | Return validated demonstration totals. |
 | `POST /training/start` | Start one headless SARSA run. |
 | `GET /training/status/{run_id}` | Return the in-memory job status and process ID. |
