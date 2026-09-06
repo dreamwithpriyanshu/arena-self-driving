@@ -68,15 +68,8 @@ small screens.
 
 ## Interaction states
 
-Every interactive control should have:
-
-- A readable default state
-- A visible hover state
-- A visible `:focus-visible` ring or border change
-- A disabled state when an operation is unavailable
-- A danger treatment for stop/destructive actions
-
-Current behavior includes:
+The interface uses distinct states for normal, hover, focus, disabled, and
+destructive actions:
 
 - Teal buttons darken on hover.
 - Secondary buttons gain a pale teal surface.
@@ -85,8 +78,8 @@ Current behavior includes:
 - Saved runs and documentation tabs show selected/hover borders.
 - Disabled buttons reduce opacity and remove the pointer affordance.
 
-Do not use hover as the only way to reveal essential information. The target
-speed, road mode, duration, current action, and run state are displayed as text.
+Target speed, road mode, duration, current action, and run state are displayed
+as text rather than being hidden behind hover behavior.
 
 ## CTA hierarchy
 
@@ -94,7 +87,7 @@ Primary CTAs use filled teal buttons. Secondary actions use outlined or
 transparent buttons. Stop uses the muted red danger style. Action cards include
 a small arrow cue, but the arrow is supplemental and not the only label.
 
-Button copy should describe the result:
+The main button labels are:
 
 ```text
 Start training
@@ -154,25 +147,8 @@ simulation. Native windows use:
 The native UI should remain functional and information-dense without copying
 the browser's panel layout.
 
-## Accessibility and responsive behavior
+## Responsive layout
 
-- Use semantic buttons and labels.
-- Preserve keyboard operation in forms.
-- Keep focus-visible styles.
-- Do not rely on color alone for status.
-- Keep text readable at narrow widths.
-- Collapse multi-column grids below the mobile breakpoint.
-- Keep documentation tables and code horizontally scrollable rather than
-  shrinking text to an unreadable size.
-
-## Implementation checklist
-
-Before changing the UI:
-
-1. Reuse an existing token.
-2. Preserve the warm neutral palette.
-3. Add hover and focus behavior together.
-4. Keep the interaction calm and short.
-5. Ensure the state is also expressed in text.
-6. Check mobile layout.
-7. Open the local page and verify the changed interaction.
+The dashboard collapses its grids on narrow screens. Documentation tables and
+code blocks remain horizontally scrollable, and the page keeps a normal
+vertical scroll.

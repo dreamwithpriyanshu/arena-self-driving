@@ -56,19 +56,7 @@ flowchart TB
     SARSA --> Store
 ```
 
-## 2. Design goals
-
-The system is designed around these goals:
-
-1. Keep the learning algorithm transparent and inspectable.
-2. Keep simulation access behind one environment facade.
-3. Keep recorded data validated and human-readable.
-4. Allow local native windows without embedding desktop UI in the browser.
-5. Make training runs observable through saved metrics and WebSockets.
-6. Keep hosted execution headless and local human driving unavailable there.
-7. Avoid accepting arbitrary client paths or shell command strings.
-
-## 3. Repository layers
+## 2. Repository layers
 
 ```text
 arena-self-driving/
@@ -92,7 +80,7 @@ arena-self-driving/
 `-- tests/         Unit and integration tests
 ```
 
-## 4. Layer responsibilities
+## 3. Layer responsibilities
 
 | Layer | Main modules | Responsibility |
 |---|---|---|
@@ -130,7 +118,7 @@ The environment factory is the only module that directly knows how to create a
 Gymnasium/HighwayEnv environment. Presentation code should use `EnvManager`
 instead of constructing Gym environments itself.
 
-## 5. Runtime entry points
+## 4. Runtime entry points
 
 ### 5.1 Browser workbench
 
@@ -187,7 +175,7 @@ The viewer:
 With `--train --save`, it can update and save the table interactively. Normal
 playback is evaluation-style and does not learn.
 
-## 6. Browser request flow
+## 5. Browser request flow
 
 ```mermaid
 sequenceDiagram
@@ -215,7 +203,7 @@ sequenceDiagram
 The backend does not interpolate a client-provided command string into a shell.
 It builds a fixed executable argument list and uses `shell=False`.
 
-## 7. Native session flow
+## 6. Native session flow
 
 ```mermaid
 flowchart LR
@@ -241,7 +229,7 @@ On Render:
 - Agent playback becomes one headless evaluation run.
 - Evaluation metrics are saved and shown in the browser.
 
-## 8. Environment and simulation layer
+## 7. Environment and simulation layer
 
 ### 8.1 Environment factory
 
@@ -300,7 +288,7 @@ flowchart TD
 
 This gives every consumer the same lifecycle and state contract.
 
-## 9. Agent and training layer
+## 8. Agent and training layer
 
 `SARSAAgent` owns the policy and table. `TrainingOrchestrator` owns episode
 control.
@@ -342,7 +330,7 @@ The trainer script controls run-level concerns:
 - Periodic checkpoint saves
 - Final cleanup
 
-## 10. Data layer
+## 9. Data layer
 
 The data layer is deliberately file-oriented. It provides schemas and
 validation rather than a database server.
@@ -420,7 +408,7 @@ only when `train.py --warm-start` is used.
 The training orchestrator filters loaded episodes to vehicle label `S`, because
 this project has one supported policy.
 
-## 11. Persistence and “database” layer
+## 10. Persistence and “database” layer
 
 ### 11.1 Storage root
 
@@ -497,7 +485,7 @@ Without `--resume`, the old runtime table is not loaded. The new zero table
 replaces the runtime checkpoint when it is saved. Demonstration files,
 historical JSONL runs, and published files are separate and are not deleted.
 
-## 12. Frontend architecture
+## 11. Frontend architecture
 
 The frontend is plain HTML, CSS, and JavaScript:
 
@@ -521,7 +509,7 @@ The JavaScript:
 The frontend does not own model state. It displays state held by the backend,
 training process, and filesystem.
 
-## 13. Backend API responsibilities
+## 12. Backend API responsibilities
 
 Important endpoints include:
 
@@ -541,7 +529,7 @@ Important endpoints include:
 The job registry is intentionally in-memory. Saved histories remain the durable
 source of run evidence if the backend process restarts.
 
-## 14. Run and metrics flow
+## 13. Run and metrics flow
 
 ```mermaid
 sequenceDiagram
@@ -565,7 +553,7 @@ sequenceDiagram
 Metrics are append-only per run. This makes partial progress visible and gives
 the project a durable experiment record independent of the in-memory registry.
 
-## 15. Hosted deployment
+## 14. Hosted deployment
 
 On Render, the service uses:
 
@@ -583,7 +571,7 @@ Differences from local mode:
 
 The hosted service should not be treated as a desktop display server.
 
-## 16. Security and process boundaries
+## 15. Security and process boundaries
 
 The backend applies several boundaries:
 
@@ -601,7 +589,7 @@ The backend applies several boundaries:
 The local server binds to `127.0.0.1`. Render binds externally because the
 platform requires it and places the service behind its deployment boundary.
 
-## 17. Failure and recovery behavior
+## 16. Failure and recovery behavior
 
 | Failure | Behavior |
 |---|---|
@@ -615,21 +603,7 @@ platform requires it and places the service behind its deployment boundary.
 | Human session on Render | Backend returns HTTP 501 |
 | Port 8000 already occupied | Existing process must be stopped or another port used |
 
-## 18. Extension points
-
-Potential extensions can be added at clear boundaries:
-
-- Add another agent implementation behind the agent interface.
-- Add a new state feature and update the state-bin contract.
-- Add another presentation surface using `EnvManager`.
-- Add a database repository behind the data/storage interfaces.
-- Add a queue and persistent job registry for multi-user hosting.
-- Add model version directories instead of one runtime checkpoint.
-
-Any state-space or action-space change must also update checkpoint compatibility,
-tests, documentation, and evaluation comparisons.
-
-## 19. Useful source map
+## 17. Source map
 
 | File | Role |
 |---|---|
@@ -650,7 +624,7 @@ tests, documentation, and evaluation comparisons.
 | `scripts/play_human.py` | Native human recorder |
 | `scripts/play_agent.py` | Native agent viewer |
 
-## 20. Validation commands
+## 18. Validation
 
 ```powershell
 python -m pytest

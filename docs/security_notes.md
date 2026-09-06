@@ -88,17 +88,15 @@ service does not provide accounts, roles, or tenant isolation.
 | WebSocket misuse | Opaque run IDs and server lookup | No user ownership/authentication |
 | Hosted data loss | Published baseline seeding | Temporary hosted storage is not durable |
 
-## Validation and test inventory
+## Validation and tests
 
-Run the complete existing validation set from the repository root:
+The repository has 19 automated tests:
 
 ```powershell
 .\venv\Scripts\python.exe -m pytest
 .\venv\Scripts\python.exe -m compileall -q backend scripts src tests
 git diff --check
 ```
-
-The test suite currently contains 19 tests:
 
 | Test area | What it verifies |
 |---|---|
@@ -109,23 +107,8 @@ The test suite currently contains 19 tests:
 | `tests/test_training.py` | Training/evaluation orchestration and checkpoint flow |
 | `tests/test_viewer_controls.py` | Viewer controls, target speed, road mode, duration behavior |
 
-The tests are automated regression checks, not a complete penetration test.
-They do not prove that the service is safe to expose publicly.
-
-## Manual security checks
-
-Before sharing a deployment, verify:
-
-1. Unknown training fields receive a validation error.
-2. Out-of-range episodes, duration, vehicles, and learning values are rejected.
-3. A second training request receives HTTP 409 while one is active.
-4. An unknown documentation ID receives HTTP 404.
-5. A run ID cannot be replaced with a filesystem path.
-6. Human sessions return HTTP 501 in hosted mode.
-7. Stopping a run changes its status and does not delete prior history.
-8. WebSocket failure falls back to saved-metric polling.
-9. A checkpoint with the wrong shape is rejected.
-10. Invalid demonstration records are not silently used for warm-start.
+These tests cover application behavior; they are not a penetration test and do
+not make the service suitable for public exposure.
 
 ## Safe operational practices
 
@@ -138,9 +121,8 @@ Before sharing a deployment, verify:
 - Stop only the specific process that owns the project port or run.
 - Keep dependencies pinned and review changes to launcher commands.
 
-## Future hardening
+## Shared deployment
 
-If this becomes a shared service, add authentication before adding features:
-persisted job ownership, CSRF/origin controls, signed model artifacts,
-encrypted storage, resource limits, structured audit events, dependency
-scanning, and a queue-backed worker service.
+The current service is intended for one trusted user. A shared deployment would
+need authentication, job ownership, origin checks, encrypted storage, resource
+limits, audit logging, and a persistent worker queue.

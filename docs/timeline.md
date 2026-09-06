@@ -1,18 +1,9 @@
 # Project Timeline and Evolution
 
-## How to read this timeline
-
-This timeline is reconstructed from the repository Git history, commit
-messages, source layout, tests, published artifacts, and the current runtime
-behavior. All recorded commits currently have the same calendar date in the
-local repository history (`2026-09-06`), so the order below follows Git's
-recorded parent/commit sequence rather than inventing times that are not
-present in the data.
-
-Some commits are named **Agent host session**. Those are implementation
-checkpoints created while iterating on the project. They are grouped with the
-feature they helped refine instead of being presented as separate product
-features.
+This timeline follows the repository's Git commit order. All recorded commits
+currently have the same calendar date in the local history
+(`2026-09-06`). Commits named **Agent host session** are grouped with the
+feature they helped refine.
 
 ```mermaid
 timeline
