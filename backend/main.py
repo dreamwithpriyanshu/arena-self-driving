@@ -37,6 +37,7 @@ DOCUMENTS = {
     "backend": "backend_notes.md",
     "timeline": "timeline.md",
     "ui": "ui_design_system.md",
+    "training-plan": "training_plan.md",
 }
 
 

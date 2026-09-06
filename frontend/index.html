@@ -15,7 +15,7 @@
         <p class="lede">A practical workbench for collecting driving demonstrations, training a transparent policy, and reviewing its progress.</p>
       </div>
       <div class="masthead-note"><span class="signal"></span><span>Local session</span><small>127.0.0.1</small></div>
-      <nav aria-label="Page sections"><a href="#drive">01&nbsp; Drive</a><a href="#train">02&nbsp; Train</a><a href="#analytics">03&nbsp; Analytics</a><a href="#docs">04&nbsp; Notes</a></nav>
+      <nav aria-label="Page sections"><a href="#drive">01&nbsp; Drive</a><a href="#train">02&nbsp; Train</a><a href="#analytics">03&nbsp; Analytics</a><a href="#plan">04&nbsp; Plan</a><a href="#docs">05&nbsp; Notes</a></nav>
     </header>
 
     <section class="panel" id="drive">
@@ -61,8 +61,20 @@
       <h3>Saved runs</h3><p class="muted">Each browser-started run has its own history and metadata under <code>artifacts/runs/&lt;run-id&gt;/</code>. Earlier history in <code>artifacts/</code> remains available too.</p><div id="runs">Loading saved runs…</div>
     </section>
 
+    <section class="panel" id="plan">
+      <div class="section-kicker">04 / Improvement plan</div>
+      <div class="section-heading"><div><h2>Seven-day training plan</h2><p class="muted">A practical path from baseline measurement to stress testing and publishing.</p></div><span class="status">No guaranteed 100% score</span></div>
+      <div class="action-grid">
+        <article><h3>Days 1–2</h3><p>Measure the baseline, back up the checkpoint, and collect careful human demonstrations for warm-start training.</p></article>
+        <article><h3>Days 3–4</h3><p>Increase state coverage with varied traffic and compare learning-rate, gamma, and exploration settings in isolated runs.</p></article>
+        <article><h3>Days 5–6</h3><p>Reduce risky behavior, then test unseen seeds, denser traffic, longer episodes, and different target speeds.</p></article>
+        <article><h3>Day 7</h3><p>Run a larger greedy evaluation and publish only a checkpoint that improves consistently over the baseline.</p></article>
+      </div>
+      <p class="muted">Success is measured with collision-free rate, survival steps, comparable reward, and stable playback—not a guaranteed accuracy percentage. Read the full plan in Documentation.</p>
+    </section>
+
     <section class="panel" id="docs">
-      <div class="section-kicker">04 / Reference</div>
+      <div class="section-kicker">05 / Reference</div>
       <h2>Project documentation</h2><p class="muted">Architecture, SARSA, workflow, security, and backend notes are available here.</p>
       <div class="docs-layout"><div id="doc-list" role="tablist"></div><article id="doc-content" class="documentation">Loading documentation…</article></div>
     </section>

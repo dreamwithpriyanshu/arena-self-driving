@@ -347,6 +347,7 @@ These commands validate the code and do not train or replace the model.
 | [Security notes](docs/security_notes.md) | Validation, risks, and test coverage |
 | [UI design system](docs/ui_design_system.md) | Typography, colors, interactions |
 | [Timeline](docs/timeline.md) | DQN history, SARSA migration, project progress |
+| [Seven-day training plan](docs/training_plan.md) | Baseline, demonstrations, tuning, stress testing, publishing |
 | [Performance history](accuracy.md) | Repeatable evaluation evidence |
 
 ## Project status
