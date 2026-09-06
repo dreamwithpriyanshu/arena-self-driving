@@ -11,6 +11,11 @@ The same human-generated dataset is used to train both vehicles:
 - **R → DQN**: human transitions are loaded into the replay buffer and used to update the neural network.
 - **S → SARSA**: human trajectories are replayed using the observed next human action for the SARSA update.
 
+The current repository provides native recording, headless training, native
+playback, and Streamlit history inspection. Automated fixed-seed evaluation
+reports are not currently implemented, so the comparison steps below should be
+treated as a measurement plan rather than existing CLI output.
+
 After the human session for a day, both agents can run autonomous episodes to continue learning. Keep the human dataset and autonomous data stored separately.
 
 ## Before Day 1: Finish coding in 5 build steps
