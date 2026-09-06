@@ -64,6 +64,10 @@ python scripts/play_multi_agent.py --duration 300
 The native window is the only live simulation view. ESC or closing the window
 ends playback; `--save` persists updated checkpoints.
 
+Reference capture from the native viewer:
+
+![Native PyGame agent playback](screenshots/native_agent_playback.png)
+
 ## 4. Inspect evidence in Streamlit
 
 Start the dashboard after a recording or training run:

@@ -10,6 +10,11 @@ ENTER, then use the arrow keys to control the selected vehicle. The recorder
 shows the highway and traffic directly in the native window and saves the
 episode when it ends. Press ESC to discard an unsafe or incomplete run.
 
+![Native PyGame human driving](screenshots/native_human_driving.png)
+
+This image should show the actual HighwayEnv window while a human controls the
+vehicle.
+
 ## Agent playback
 
 `python scripts/play_agent.py R` and `python scripts/play_agent.py S` open an
@@ -20,6 +25,12 @@ until the duration, collision, or window close ends the episode.
 `python scripts/play_multi_agent.py` runs DQN and SARSA together using two
 controlled vehicles. This is the visual comparison mode; the Performance
 Analytics page is the historical comparison mode.
+
+![Native PyGame agent playback](screenshots/native_agent_playback.png)
+
+Optional side-by-side reference:
+
+![Native PyGame multi-agent playback](screenshots/native_multi_agent.png)
 
 ## Reading the result
 

@@ -20,6 +20,9 @@ The project has two runtime surfaces:
 - **Streamlit** is a data and analytics dashboard. It does not run or render
   the simulation.
 
+Native runtime examples are documented with screenshots in
+[`tutorials/simulation_output.md`](tutorials/simulation_output.md).
+
 ## Project structure
 
 ```text
