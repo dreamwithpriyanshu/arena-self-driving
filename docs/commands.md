@@ -7,7 +7,7 @@ Run commands from the repository root with the virtual environment active.
 ```powershell
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements-native.txt
+pip install -r requirements.txt
 python -m backend.main
 ```
 

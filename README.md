@@ -19,7 +19,7 @@ It is not a real driving system.
 ```powershell
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements-native.txt
+pip install -r requirements.txt
 
 # Start the local training control surface, then open http://127.0.0.1:8000
 python -m backend.main
