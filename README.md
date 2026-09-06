@@ -185,4 +185,3 @@ This project is for educational purposes.
 
 ---
 
-*Built with [Antigravity](https://antigravity.dev) + HighwayEnv + Streamlit*
