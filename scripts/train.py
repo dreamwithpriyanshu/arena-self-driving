@@ -20,13 +20,27 @@ def main():
     parser.add_argument("--episodes", type=int, default=10, help="Number of episodes to train")
     parser.add_argument("--warm-start", action="store_true", help="Warm-start agents using human demonstrations before training")
     parser.add_argument("--batch-size", type=int, default=64, help="DQN replay buffer batch size")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
+    parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
+    parser.add_argument("--target-update-freq", type=int, default=100, help="Target network update frequency (steps)")
+    parser.add_argument("--buffer-capacity", type=int, default=10000, help="Replay buffer capacity for DQN")
+    parser.add_argument("--device", type=str, choices=["auto","cpu","cuda"], default="auto", help="Device to run training on")
     parser.add_argument("--epsilon-start", type=float, default=1.0, help="Initial exploration rate")
     parser.add_argument("--epsilon-decay", type=float, default=0.995, help="Exploration decay rate")
     parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
     parser.add_argument("--duration", type=int, default=120, help="Max duration of an episode in steps")
     parser.add_argument("--save-freq", type=int, default=5, help="Save checkpoints every N episodes")
+    parser.add_argument("--log-interval", type=int, default=1, help="Print metrics every N episodes")
+    parser.add_argument("--history-mode", type=str, choices=["per-run","append"], default="per-run", help="How to persist training history: per-run timestamped file or append to single file")
+    parser.add_argument("--history-dir", type=str, default="artifacts", help="Directory to store training history files")
     
     args = parser.parse_args()
+
+    # Device selection (allow override)
+    if args.device == "auto":
+        device = "cuda" if __import__("torch").cuda.is_available() else "cpu"
+    else:
+        device = args.device
     
     print("=======================================")
     print("      SELF-DRIVING CAR CLI TRAINER")
@@ -75,6 +89,16 @@ def main():
         print(f"  DQN Buffer Prefilled: {stats.get('r_prefilled', 0)}")
         print(f"  SARSA Table Updates : {stats.get('s_warm_started', 0)}")
 
+    # Prepare training history file according to the requested mode
+    history_dir = Path(args.history_dir)
+    history_dir.mkdir(parents=True, exist_ok=True)
+    if args.history_mode == "per-run":
+        ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+        history_path = history_dir / f"training_history_{ts}.jsonl"
+    else:
+        # append to a single canonical history file for backward compatibility
+        history_path = history_dir / "training_history.jsonl"
+
     # Environment
     config_overrides = {
         "vehicles_count": args.vehicles_count,
@@ -107,8 +131,6 @@ def main():
                 # Streamlit dashboard can reflect training progress after the run.
                 try:
                     import json
-                    history_path = Path("artifacts") / "training_history.jsonl"
-                    history_path.parent.mkdir(parents=True, exist_ok=True)
                     record = {"episode_num": ep, "vehicle": vehicle, **metrics, "timestamp": time.time()}
                     with history_path.open("a", encoding="utf-8") as fh:
                         fh.write(json.dumps(record) + "\n")

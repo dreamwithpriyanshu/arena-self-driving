@@ -23,13 +23,47 @@ Since Web Browser rendering is too slow for 60FPS physics, you will record demon
 ## 2. Autonomous Training (CLI)
 Once you have recorded demonstrations, you can train the agents using the powerful, headless CLI orchestrator.
 
-1. Open a terminal and run the batch trainer:
+1. Open a terminal and run the batch trainer. The trainer exposes several useful options to tune learning and runtime behaviour:
    ```bash
-   python scripts/train.py --agent BOTH --episodes 100 --warm-start --batch-size 64
+   python scripts/train.py \
+     --agent BOTH \
+     --episodes 100 \
+     --warm-start \
+     --batch-size 64 \
+     --lr 1e-3 \
+     --gamma 0.99 \
+     --target-update-freq 100 \
+     --buffer-capacity 10000 \
+     --device auto \
+     --save-freq 5 \
+     --history-mode per-run
    ```
+
+   Important flags:
+   - `--lr`: optimizer learning rate (affects DQN training stability).
+   - `--gamma`: discount factor for future rewards.
+   - `--target-update-freq`: how many DQN optimization steps between target-network updates.
+   - `--buffer-capacity`: replay buffer capacity for DQN prefill and sampling.
+   - `--device`: `auto` (default), `cpu`, or `cuda`.
+   - `--history-mode`: `per-run` (default) creates a timestamped history file in `artifacts/` for each run; `append` writes to the legacy `artifacts/training_history.jsonl`.
+
 2. The `--warm-start` flag will automatically load your human demonstrations to prefill the DQN replay buffer and initialize the SARSA Q-table.
-3. The system will autonomously simulate the episodes in the background at maximum speed (no rendering overhead).
-4. The script will save checkpoints to `artifacts/checkpoints` periodically.
+3. The trainer runs headless (no rendering) at full speed for fastest training. The native PyGame rendering modes are available via `scripts/play_agent.py` for visual debugging and live training.
+4. Checkpoints are saved to `artifacts/checkpoints` periodically (controlled by `--save-freq`).
+
+### Training history files
+By default the trainer writes a per-run, timestamped NDJSON file to `artifacts/` named like `training_history_YYYYMMDD_HHMMSS.jsonl`. The Streamlit dashboard will detect recent run files and let you load them from the sidebar.
+
+If you prefer the old single-file behaviour, run with `--history-mode append` and the trainer will append episode records to `artifacts/training_history.jsonl`.
+
+### Example: quick training with GPU
+```bash
+python scripts/train.py --agent R --episodes 200 --warm-start --device cuda --lr 5e-4 --buffer-capacity 20000
+```
+
+### Stopping and resuming
+- Ctrl+C during training will safely stop the loop and save checkpoints.
+- Re-run the trainer in the same working directory to continue from saved checkpoints; the script attempts to load existing weights at startup.
 
 ## 3. Live AI Training (Native PyGame)
 If you prefer to physically watch the agent learn and make mistakes in real-time:

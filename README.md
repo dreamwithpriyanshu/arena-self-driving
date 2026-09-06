@@ -111,6 +111,17 @@ streamlit run app.py
 
 For a high-performance, real-time 60 FPS experience outside of Streamlit:
 
+### Run the headless trainer (CLI)
+
+A headless CLI trainer runs episodes at maximum speed and writes per-run training history files that the Streamlit dashboard can visualize. Example:
+
+```bash
+python scripts/train.py --agent BOTH --episodes 100 --warm-start --batch-size 64 --history-mode per-run
+```
+
+See `tutorials/training_guide.md` for full details and advanced flags.
+
+
 **1. Drive Manually (Data Collection)**
 ```bash
 # Drive vehicle R using your physical arrow keys to record a dataset
