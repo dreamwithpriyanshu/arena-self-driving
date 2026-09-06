@@ -63,14 +63,70 @@
 
     <section class="panel" id="plan">
       <div class="section-kicker">04 / Improvement plan</div>
-      <div class="section-heading"><div><h2>Seven-day training plan</h2><p class="muted">A practical path from baseline measurement to stress testing and publishing.</p></div><span class="status">No guaranteed 100% score</span></div>
-      <div class="action-grid">
-        <article><h3>Days 1–2</h3><p>Measure the baseline, back up the checkpoint, and collect careful human demonstrations for warm-start training.</p></article>
-        <article><h3>Days 3–4</h3><p>Increase state coverage with varied traffic and compare learning-rate, gamma, and exploration settings in isolated runs.</p></article>
-        <article><h3>Days 5–6</h3><p>Reduce risky behavior, then test unseen seeds, denser traffic, longer episodes, and different target speeds.</p></article>
-        <article><h3>Day 7</h3><p>Run a larger greedy evaluation and publish only a checkpoint that improves consistently over the baseline.</p></article>
+      <div class="section-heading"><div><h2>Seven-day training plan</h2><p class="muted">A complete path from baseline measurement to stress testing and publishing.</p></div><span class="status">Reliability target, not guaranteed accuracy</span></div>
+      <p class="muted">A 100% score cannot be guaranteed in random traffic. A model can score perfectly on a small fixed test and still fail on unseen layouts. Compare collision-free rate, survival, reward, and stability across new seeds.</p>
+      <div class="plan-grid">
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 1</span><strong>Establish a baseline</strong></div>
+          <p>Back up the current checkpoint, continue the existing model for a controlled run, and record its starting performance.</p>
+          <pre><code>Copy-Item artifacts\checkpoints\sarsa_q_table.npy `
+  artifacts\checkpoints\sarsa_q_table.day1.backup.npy
+python scripts/train.py --episodes 100 --resume --seed 1000
+python scripts/evaluate_model.py --episodes 20 --steps 300 --seed 1000</code></pre>
+          <p class="muted">Record average reward, survival steps, and collision-free rate in <code>accuracy.md</code>.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 2</span><strong>Collect better demonstrations</strong></div>
+          <p>Drive 20–50 careful human episodes. Save smooth, collision-free episodes and discard poor demonstrations.</p>
+          <pre><code>python scripts/play_human.py
+python scripts/train.py --episodes 200 --resume --warm-start --seed 2000</code></pre>
+          <p class="muted">Demonstrations are saved as JSONL in <code>data/human_demonstrations/</code>. Warm-start gives the table a human-guided starting bias.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 3</span><strong>Increase state coverage</strong></div>
+          <p>Expose the policy to different lane, speed, gap, and rear-traffic states without changing the state representation.</p>
+          <pre><code>python scripts/train.py --episodes 300 --resume --vehicles-count 20 `
+  --vehicles-density 1.2 --duration 400 --seed 3000</code></pre>
+          <p class="muted">Use different seeds, traffic counts, densities, and longer episodes so the table sees more situations.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 4</span><strong>Compare SARSA settings</strong></div>
+          <p>Compare learning rates around <code>0.05–0.10</code>, gamma around <code>0.95–0.99</code>, and exploration ending around <code>0.02–0.05</code>.</p>
+          <pre><code>$env:ARENA_STORAGE_DIR = "D:\arena-experiment-day4"
+python scripts/train.py --episodes 300 --seed 4000
+python scripts/evaluate_model.py --episodes 20 --steps 300 --seed 4000
+Remove-Item Env:ARENA_STORAGE_DIR</code></pre>
+          <p class="muted">Keep the configuration with the best consistent collision-free rate and survival, not just the highest single reward.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 5</span><strong>Reduce risky behavior</strong></div>
+          <p>Use moderate target speeds, retain the lane-change penalty, and keep the collision penalty strong.</p>
+          <pre><code>python scripts/train.py --episodes 300 --resume --duration 400 --seed 5000
+python scripts/evaluate_model.py --episodes 30 --steps 400 --seed 5000</code></pre>
+          <p class="muted">Do not select a model only because it drives faster. Stable survival matters more than raw speed.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 6</span><strong>Stress test unseen conditions</strong></div>
+          <p>Test conditions that were not used for the main training run:</p>
+          <ul><li>Different random seeds</li><li>More vehicles and higher density</li><li>Different starting lanes</li><li>Longer episodes</li><li>Different target speeds</li></ul>
+          <p class="muted">Reject models that perform well only on familiar seeds or light traffic.</p>
+        </article>
+        <article class="plan-day">
+          <div class="plan-day-head"><span>DAY 7</span><strong>Evaluate and publish</strong></div>
+          <p>Run a larger greedy evaluation, compare it with Day 1, and publish only a checkpoint that improves consistently.</p>
+          <pre><code>python scripts/evaluate_model.py --episodes 100 --steps 300 --seed 7000
+python scripts/publish_model.py
+git add published accuracy.md
+git commit -m "Publish improved SARSA baseline"
+git push</code></pre>
+          <p class="muted">Publishing is explicit. Review the evaluation before sharing the checkpoint.</p>
+        </article>
       </div>
-      <p class="muted">Success is measured with collision-free rate, survival steps, comparable reward, and stable playback—not a guaranteed accuracy percentage. Read the full plan in Documentation.</p>
+      <div class="plan-success">
+        <h3>Practical success criteria</h3>
+        <ul><li>Collision-free rate close to 100% across unseen seeds</li><li>Longer average survival</li><li>No major collapse in denser traffic</li><li>Stable real-time playback</li><li>Higher comparable reward than the baseline</li></ul>
+        <p class="muted">Keep episode count, seed, duration, and environment settings recorded when comparing results.</p>
+      </div>
     </section>
 
     <section class="panel" id="docs">
