@@ -53,3 +53,9 @@ htmlcov/
 # --- Excluded during refactor ---
 scratch/
 .env
+
+# Training artifacts and model weights (do not commit large binaries)
+artifacts/training_history.jsonl
+*.pt
+models/
+logs/

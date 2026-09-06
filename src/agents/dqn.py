@@ -202,7 +202,9 @@ class DQNAgent(BaseAgent):
         if not model_path.exists():
             raise FileNotFoundError(f"DQN weights not found: {model_path}")
         
-        state_dict = torch.load(model_path, map_location=self.device, weights_only=True)
+        # Load state dict safely mapping to the configured device.
+        # torch.load does not accept a `weights_only` keyword; remove it.
+        state_dict = torch.load(model_path, map_location=self.device)
         self.policy_net.load_state_dict(state_dict)
         self.target_net.load_state_dict(state_dict)
         logger.info("DQNAgent loaded from %s", model_path)

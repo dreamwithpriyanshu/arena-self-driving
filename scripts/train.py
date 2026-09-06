@@ -102,6 +102,18 @@ def main():
                 
                 print(f" Done! (Reward: {metrics['total_reward']:+.2f}, Steps: {metrics['steps']})")
                 print(f"  Details: Epsilon={metrics.get('epsilon', 0):.3f} | Crashed: {metrics['terminated']}")
+
+                # Persist per-episode metrics to a newline-delimited JSON file so the
+                # Streamlit dashboard can reflect training progress after the run.
+                try:
+                    import json
+                    history_path = Path("artifacts") / "training_history.jsonl"
+                    history_path.parent.mkdir(parents=True, exist_ok=True)
+                    record = {"episode_num": ep, "vehicle": vehicle, **metrics, "timestamp": time.time()}
+                    with history_path.open("a", encoding="utf-8") as fh:
+                        fh.write(json.dumps(record) + "\n")
+                except Exception as e:
+                    print(f"[!] Warning: failed to write training history: {e}")
                 
             if ep % args.save_freq == 0:
                 orchestrator.save_checkpoints()

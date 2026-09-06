@@ -1,5 +1,7 @@
 import streamlit as st
 from src.data.loader import get_dataset_summary
+from pathlib import Path
+import json
 
 st.set_page_config(
     page_title="Arena Self-Driving — Data Center",
@@ -7,6 +9,35 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Load training history (if available) into session state so the Streamlit
+# multipage dashboard (Performance Analytics) can visualize recent training runs.
+if "training_history" not in st.session_state:
+    history_path = Path("artifacts") / "training_history.jsonl"
+    if history_path.exists():
+        try:
+            with history_path.open("r", encoding="utf-8") as fh:
+                lines = [line.strip() for line in fh if line.strip()]
+                st.session_state.training_history = [json.loads(l) for l in lines]
+        except Exception as e:
+            st.session_state.training_history = []
+            st.warning(f"Failed to load training history: {e}")
+    else:
+        st.session_state.training_history = []
+
+# Provide a small control to refresh training history during a live session.
+if st.sidebar.button("Reload Training History"):
+    history_path = Path("artifacts") / "training_history.jsonl"
+    if history_path.exists():
+        try:
+            with history_path.open("r", encoding="utf-8") as fh:
+                lines = [line.strip() for line in fh if line.strip()]
+                st.session_state.training_history = [json.loads(l) for l in lines]
+            st.sidebar.success("Training history reloaded.")
+        except Exception as e:
+            st.sidebar.error(f"Failed to reload: {e}")
+    else:
+        st.sidebar.info("No training history file found yet.")
 
 st.title("Data Command Center")
 
