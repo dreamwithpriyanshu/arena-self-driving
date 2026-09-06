@@ -204,6 +204,15 @@ def test_state_builder_edge_cases() -> None:
     # All-zero observation (no neighbours visible)
     obs_empty = np.zeros((6, 6), dtype=np.float32)
     raw = build_raw_state(obs_empty)
+
+
+def test_state_builder_edge_cases() -> None:
+    """Test state builder with edge-case observations."""
+    _header("Test 5: State builder edge cases")
+
+    # All-zero observation (no neighbours visible)
+    obs_empty = np.zeros((6, 6), dtype=np.float32)
+    raw = build_raw_state(obs_empty)
     assert raw.shape == (36,)
     print(f"  [OK] All-zero obs -> raw shape {raw.shape}")
 
@@ -211,12 +220,20 @@ def test_state_builder_edge_cases() -> None:
     assert 0 <= discrete < total_discrete_states()
     print(f"  [OK] All-zero obs -> discrete state {discrete}")
 
-    # Observation with 1-D ego-only vector should now be accepted and expanded
+    # 1-D ego-only vector: previously this raised ValueError.  The test was
+    # relaxed because some HighwayEnv configurations (e.g. ego-only
+    # observations, or multi-agent tuple unpacking) produce 1-D vectors
+    # instead of the expected (V, F) matrix.  Rather than crashing, the
+    # builder now zero-pads neighbour rows and emits a logger.warning.
+    # This is conservative: the ego row is preserved accurately, but
+    # neighbour features (gap, speed-diff, lane occupancy) all read as zero,
+    # which corresponds to "no neighbours visible".  If full neighbour
+    # information is required, callers should ensure the env is configured
+    # to return full Kinematics matrices, or use build_raw_state_from_env
+    # for best-effort reconstruction from env internals.
     raw = build_raw_state(np.zeros((10,)))
     expected_dim = raw_state_dim(vehicles_count=6, features_count=10)
     assert raw.shape == (expected_dim,)
     print(f"  [OK] 1-D obs expanded -> raw shape {raw.shape}")
 
     print("  [OK] Edge case tests passed")
-
-

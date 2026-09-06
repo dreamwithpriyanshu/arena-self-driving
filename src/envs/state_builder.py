@@ -11,12 +11,15 @@ Layer: envs  (knows nothing about agents, training, or Streamlit)
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
 import yaml
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Config loading helpers
@@ -80,9 +83,18 @@ def build_raw_state(obs: np.ndarray) -> np.ndarray:
     obs = np.asarray(obs, dtype=np.float32)
 
     # Accept both full (V, F) matrices and ego-only (F,) vectors.
+    # When a 1-D vector is received, neighbour rows are zero-padded which
+    # means all neighbour features (gap, speed-diff, lane-occupancy) will
+    # read as zero — a conservative "no neighbours visible" assumption.
     if obs.ndim == 1:
         features = obs.size
         vehicles = _default_vehicles_count()
+        logger.warning(
+            "build_raw_state received 1-D obs of shape (%d,); "
+            "expanding to (%d, %d) with zero-padded neighbour rows. "
+            "Neighbour information will be absent.",
+            features, vehicles, features,
+        )
         mat = np.zeros((vehicles, features), dtype=np.float32)
         mat[0, :features] = obs
         obs = mat
@@ -112,6 +124,10 @@ def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> 
         unwrapped = getattr(env, "unwrapped", env)
         road = getattr(unwrapped, "road", None)
         if road is None:
+            logger.warning(
+                "build_raw_state_from_env: env.unwrapped has no 'road' "
+                "attribute — reconstruction not possible."
+            )
             return None
 
         # Collect vehicles from the road object. `road.vehicles` may be a
@@ -129,6 +145,10 @@ def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> 
                     vehicles = []
 
         if not vehicles:
+            logger.warning(
+                "build_raw_state_from_env: road.vehicles is empty — "
+                "reconstruction not possible."
+            )
             return None
 
         ego = getattr(unwrapped, "vehicle", vehicles[0])
@@ -169,6 +189,11 @@ def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> 
 
                 rows.append([x, y, vx, vy, cos_h, sin_h])
             except Exception:
+                logger.warning(
+                    "build_raw_state_from_env: failed to extract "
+                    "features from vehicle %d; zero-padding row.",
+                    len(rows),
+                )
                 rows.append([0.0, 0.0, 0.0, 0.0, 1.0, 0.0])
 
         vc = vehicles_count or _default_vehicles_count()
@@ -178,6 +203,11 @@ def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> 
             mat[i, :len(r)] = r
         return mat
     except Exception:
+        logger.warning(
+            "build_raw_state_from_env: unexpected error during "
+            "reconstruction — returning None.",
+            exc_info=True,
+        )
         return None
 
 
@@ -314,6 +344,11 @@ def build_discrete_state(
     if obs.ndim == 1:
         features = obs.size
         vehicles = _default_vehicles_count()
+        logger.warning(
+            "build_discrete_state received 1-D obs of shape (%d,); "
+            "expanding to (%d, %d) with zero-padded neighbour rows.",
+            features, vehicles, features,
+        )
         mat = np.zeros((vehicles, features), dtype=np.float32)
         mat[0, :features] = obs
         obs = mat
@@ -421,6 +456,11 @@ def build_discrete_state_with_lane(
     if obs.ndim == 1:
         features = obs.size
         vehicles = _default_vehicles_count()
+        logger.warning(
+            "build_discrete_state_with_lane received 1-D obs of shape "
+            "(%d,); expanding to (%d, %d) with zero-padded neighbour rows.",
+            features, vehicles, features,
+        )
         mat = np.zeros((vehicles, features), dtype=np.float32)
         mat[0, :features] = obs
         obs = mat
