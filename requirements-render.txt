@@ -1,0 +1,6 @@
+# Headless Render dependencies. PyGame is intentionally local-only.
+-r requirements.txt
+highway-env>=1.9,<1.13
+gymnasium>=0.29,<1.0
+numpy>=1.24
+pyyaml>=6.0,<7.0

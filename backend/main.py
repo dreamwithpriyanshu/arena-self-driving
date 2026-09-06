@@ -37,6 +37,7 @@ DOCUMENTS = {
     "timeline": "timeline.md",
     "ui": "ui_design_system.md",
     "render": "render_deployment.md",
+    "render-free": "render_free_web_service.md",
 }
 
 

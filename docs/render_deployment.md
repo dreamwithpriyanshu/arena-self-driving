@@ -17,8 +17,8 @@ The Blueprint sets these values:
 | Setting | Value |
 |---|---|
 | Service type | Web Service |
-| Runtime | Python |
-| Build command | `pip install -r requirements.txt -r requirements-native.txt` |
+| Runtime | Python 3.13.7 (from `.python-version`) |
+| Build command | `pip install -r requirements-render.txt` |
 | Start command | `uvicorn backend.main:app --host 0.0.0.0 --port $PORT` |
 | Health check path | `/` |
 | Persistent disk mount | `/var/data` |
@@ -35,8 +35,8 @@ If you do not use the Blueprint, create **New > Web Service** with:
 - **Repository:** this GitHub repository
 - **Branch:** the branch containing this code
 - **Root Directory:** blank
-- **Runtime:** Python 3
-- **Build Command:** `pip install -r requirements.txt -r requirements-native.txt`
+- **Runtime:** Python 3.13.7
+- **Build Command:** `pip install -r requirements-render.txt`
 - **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
 - **Auto-deploy:** enabled if you want GitHub pushes to deploy code changes
 - **Environment variable:** `ARENA_STORAGE_DIR` = `/var/data`

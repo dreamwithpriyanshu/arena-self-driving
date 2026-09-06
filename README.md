@@ -31,9 +31,11 @@ HTML, CSS, and JavaScript files in `frontend/`.
 ## Deploy to Render
 
 Use the included [`render.yaml`](render.yaml) as a Blueprint. It installs the
-Python dependencies, binds FastAPI to Render's public port, and mounts a
+headless Python dependencies, binds FastAPI to Render's public port, and mounts a
 persistent disk at `/var/data`. `ARENA_STORAGE_DIR=/var/data` keeps human
 demonstrations, checkpoints, and all run history across deploys and restarts.
+Render is pinned to Python 3.13.7 because `highway-env` requires PyGame and
+Python 3.14 may force an SDL source build.
 Persistent disks require a paid Render instance and are attached to one service
 instance; do not scale this service horizontally unless storage is moved to
 object storage or a database.
@@ -126,4 +128,5 @@ available directly:
 - [Security and data notes](docs/security_notes.md)
 - [UI design](docs/ui_design_system.md)
 - [Render deployment](docs/render_deployment.md)
+- [Free Render Web Service](docs/render_free_web_service.md)
 - [Project status](docs/timeline.md)
