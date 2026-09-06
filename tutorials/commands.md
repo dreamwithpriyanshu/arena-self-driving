@@ -56,8 +56,9 @@ Positional arguments:
 
 Options:
 - `--vehicles-count N` : Number of NPC vehicles on the road (default: 15)
-- `--duration N` : Max episode duration in steps (default: 120)
+- `--duration N` : Episode duration in real-time seconds (default: 120)
 - `--vehicles-density D` : Traffic density multiplier (default: 1.0)
+- `--target-speed S` : Target speed in m/s (default: 18.0)
 
 Examples:
 - Record demonstrations for DQN (vehicle R):
@@ -73,14 +74,22 @@ Examples:
   ```
 
 Controls in the PyGame window:
-- Arrow Up: accelerate
-- Arrow Down: brake
-- Arrow Left / Right: lane change
+- Arrow keys: default drive profile (Up accelerate, Down brake, Left/Right lane change)
+- `C` (setup): switch between the Arrow and WASD profiles
+- `P`: pause/resume without stepping or recording a transition
 - `H`: hide/show live telemetry
-- `S`: save the completed demonstration
-- `X`: discard the completed demonstration
+- `[` / `]`: lower/raise the live target speed
+- `S`: save a completed demonstration only
+- `X`: discard a completed demonstration only
 - `ESC`: discard/close the current run
 - ENTER (on instruction screen): start recording
+
+The setup screen adjusts NPC count, density, initial speed, duration, and the
+control profile. Edit `configs/control_bindings.json` to remap the Arrow or
+WASD profile. The driving HUD has clickable Pause, -SPD, and +SPD buttons;
+NPC count and density take effect on the next episode because HighwayEnv
+creates traffic at reset. The HUD runs at 60 FPS; the simulation applies a
+discrete action at 15 Hz and reports both the held input and the last action.
 
 
 scripts/play_agent.py
@@ -135,6 +144,7 @@ Options:
 - `--vehicles-count N` : Number of NPC vehicles (default: 20)
 - `--duration N` : Max duration in steps (default: 120)
 - `--vehicles-density D` : Traffic density multiplier (default: 1.0)
+- `--target-speed S` : Target speed in m/s (default: 18.0)
 - `--train` : Enable live training for both agents
 - `--save` : Save checkpoints after running
 
@@ -147,6 +157,8 @@ python scripts/play_multi_agent.py --vehicles-count 30 --duration 300 --train --
 Notes & robustness:
 - The native window shows live R/S actions, cumulative rewards, lanes, speeds, and terminal status.
 - `SPACE` pauses/resumes, `H` toggles the HUD, `S` saves both checkpoints immediately, and `ESC` quits.
+- Before starting, the GUI adjusts NPC count, density, target speed, and duration with the displayed controls.
+- A crashed car stops taking decisions; the other continues until both cars crash or the duration limit is reached.
 - The multi-agent script accepts observations either as full kinematics matrices `(V, F)` or ego-only vectors `(F,)`. Ego-only observations are automatically expanded to `(V, F)` by padding neighbour rows with zeros.
 - If you prefer richer neighbour information rather than zero padding, the environment configuration may be adjusted to return the full Kinematics observation.
 

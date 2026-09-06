@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.envs.actions import Action
 from src.human.keyboard_controller import KeyboardController
+from src.human.control_bindings import active_actions, load_control_profiles
 from src.human.episode_manager import EpisodeManager
 from src.data.validator import validate_episode_file
 from src.data.loader import load_episode, get_dataset_summary
@@ -54,6 +55,15 @@ def test_keyboard_controller() -> None:
     
     print("  [OK] Default mappings correct")
     print("  [OK] Unknown key fallback to IDLE correct")
+
+
+def test_control_profiles() -> None:
+    _header("Test 1b: Configurable Control Profiles")
+    default_profile, profiles = load_control_profiles()
+    assert default_profile == "arrows"
+    assert active_actions(profiles["arrows"], {"up", "left"}) == [Action.LANE_LEFT, Action.FASTER]
+    assert active_actions(profiles["wasd"], {"w", "s"}) == [Action.FASTER, Action.SLOWER]
+    print("  [OK] Arrow and WASD profiles resolve held actions correctly")
 
 
 def test_episode_manager_and_recorder() -> None:

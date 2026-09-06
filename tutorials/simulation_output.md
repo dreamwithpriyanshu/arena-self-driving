@@ -6,9 +6,15 @@ Streamlit does not render or control this loop.
 ## Human driving
 
 `python scripts/play_human.py R` opens an instruction screen first. Press
-ENTER, then use the arrow keys to control the selected vehicle. The recorder
-shows the highway and traffic directly in the native window and saves the
-episode when it ends. Press ESC to discard an unsafe or incomplete run.
+ENTER, then use the default Arrow profile to control the selected vehicle.
+Press `C` on setup to switch to WASD; mappings live in
+`configs/control_bindings.json`. The recorder shows the highway and traffic
+directly in the native window. Its HUD reports the held input and last applied
+action, `P` pauses without recording, and `[`/`]` adjust target speed. Once an
+episode ends, press `S` to save or `X` to discard it; ESC discards an unsafe or
+incomplete run. The HUD also exposes clickable Pause, -SPD, and +SPD buttons.
+NPC count and density are selected on setup because the environment creates
+traffic when the episode begins.
 
 ![Native PyGame human driving](screenshots/native_human_driving.png)
 
@@ -49,6 +55,9 @@ Optional side-by-side reference:
 - `--save` writes the updated checkpoint after the native session.
 - Both native modes keep the window open after a crash or timeout. Use the
   visible GUI controls to save, discard, restart where supported, or close.
+- Before starting, the GUI adjusts NPC count, traffic density, target speed,
+  and duration. In multi-agent mode, a crashed car stops taking decisions
+  while the other continues until both crash or the duration limit is reached.
 - If a checkpoint is missing, the viewer reports it and the agent may act
   randomly; this is expected for a new checkout.
 

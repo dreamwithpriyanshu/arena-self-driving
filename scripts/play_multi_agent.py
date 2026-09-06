@@ -69,8 +69,8 @@ def _prepare_visible_agents(env) -> None:
         lane = road.network.get_lane(lane_index)
         vehicle.position = lane.position(anchor_x, 0)
         vehicle.heading = lane.heading_at(anchor_x)
-        vehicle.speed = 22.0
-        vehicle.target_speed = 22.0
+        vehicle.speed = float(getattr(env, "_arena_target_speed", 18.0))
+        vehicle.target_speed = float(getattr(env, "_arena_target_speed", 18.0))
         vehicle.target_lane_index = lane_index
         vehicle.color = colour
         vehicle.on_state_update()
@@ -81,6 +81,8 @@ def main():
     parser.add_argument("--vehicles-count", type=int, default=20, help="Number of NPC vehicles on the road")
     parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in steps")
     parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier")
+    parser.add_argument("--target-speed", type=float, default=18.0, help="Target speed in m/s")
+    parser.add_argument("--render-fps", type=int, default=12, help="Native playback update rate")
     parser.add_argument("--train", action="store_true", help="Enable live training/exploration during gameplay")
     parser.add_argument("--save", action="store_true", help="Save agent checkpoints after running (useful with --train)")
     
@@ -95,6 +97,12 @@ def main():
     font_big = pygame.font.SysFont("consolas", 24, bold=True)
     font = pygame.font.SysFont("consolas", 18)
 
+    settings = {
+        "vehicles_count": args.vehicles_count,
+        "vehicles_density": args.vehicles_density,
+        "duration": args.duration,
+        "target_speed": args.target_speed,
+    }
     lines = [
         f"MULTI-AGENT {mode_text}: DQN vs SARSA",
         "",
@@ -119,6 +127,23 @@ def main():
     # Wait for ENTER
     waiting = True
     while waiting:
+        screen.fill((30, 30, 36))
+        setup_lines = [
+            lines[0],
+            "",
+            f"NPC vehicles: {settings['vehicles_count']}   density: {settings['vehicles_density']:.1f}",
+            f"Target speed: {settings['target_speed']:.1f} m/s   duration: {settings['duration']} steps",
+            "",
+            "UP/DOWN NPC   LEFT/RIGHT density   [/] speed   -/+ duration",
+            "ENTER start   ESC quit",
+        ]
+        for i, line in enumerate(setup_lines):
+            f = font_big if i == 0 else font
+            color = (0, 255, 128) if i == 0 else (200, 200, 200)
+            if i in (2, 3):
+                color = (0, 229, 255)
+            screen.blit(f.render(line, True, color), (30, 30 + i * 32))
+        pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -129,6 +154,22 @@ def main():
                 elif event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     return
+                elif event.key == pygame.K_UP:
+                    settings["vehicles_count"] = min(60, settings["vehicles_count"] + 1)
+                elif event.key == pygame.K_DOWN:
+                    settings["vehicles_count"] = max(4, settings["vehicles_count"] - 1)
+                elif event.key == pygame.K_RIGHT:
+                    settings["vehicles_density"] = min(3.0, round(settings["vehicles_density"] + 0.1, 1))
+                elif event.key == pygame.K_LEFT:
+                    settings["vehicles_density"] = max(0.2, round(settings["vehicles_density"] - 0.1, 1))
+                elif event.key == pygame.K_RIGHTBRACKET:
+                    settings["target_speed"] = min(30.0, settings["target_speed"] + 1.0)
+                elif event.key == pygame.K_LEFTBRACKET:
+                    settings["target_speed"] = max(8.0, settings["target_speed"] - 1.0)
+                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
+                    settings["duration"] = min(1000, settings["duration"] + 30)
+                elif event.key == pygame.K_MINUS:
+                    settings["duration"] = max(30, settings["duration"] - 30)
 
     # Close the instruction window
     pygame.display.quit()
@@ -155,9 +196,9 @@ def main():
 
     # ── Run evaluation episode ───────────────────────────────────
     config_overrides = {
-        "vehicles_count": args.vehicles_count,
-        "duration": args.duration,
-        "vehicles_density": args.vehicles_density,
+        "vehicles_count": settings["vehicles_count"],
+        "duration": settings["duration"],
+        "vehicles_density": settings["vehicles_density"],
         "controlled_vehicles": 2, # Two controlled agents!
         "observation": {
             "type": "MultiAgentObservation",
@@ -176,8 +217,13 @@ def main():
     }
 
     env = create_highway_env(render_mode="human", config_overrides=config_overrides)
+    env._arena_target_speed = settings["target_speed"]
     obs_tuple, info = env.reset()
     _prepare_visible_agents(env)
+    env.unwrapped._is_terminated = lambda: all(
+        bool(getattr(vehicle, "crashed", False))
+        for vehicle in env.unwrapped.controlled_vehicles
+    )
     # Re-read observations after repositioning the controlled vehicles.
     obs_tuple = env.unwrapped.observation_type.observe()
     
@@ -238,7 +284,7 @@ def main():
             surface.blit(hud_small.render(rows[-1], True, colour), (12, height - 62 + index * 18))
 
     try:
-        for step in range(args.duration):
+        for step in range(settings["duration"]):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     raise KeyboardInterrupt
@@ -304,8 +350,17 @@ def main():
             discrete_state_sarsa = build_discrete_state(obs_sarsa, lanes_count=env.unwrapped.config.get("lanes_count", 4))
 
             # Get actions
-            action_dqn = agent_dqn.act(state=state_dqn, discrete_state=discrete_state_dqn)
-            action_sarsa = agent_sarsa.act(state=state_sarsa, discrete_state=discrete_state_sarsa)
+            controlled = getattr(env.unwrapped, "controlled_vehicles", [])
+            action_dqn = (
+                1
+                if controlled and controlled[0].crashed
+                else agent_dqn.act(state=state_dqn, discrete_state=discrete_state_dqn)
+            )
+            action_sarsa = (
+                1
+                if len(controlled) > 1 and controlled[1].crashed
+                else agent_sarsa.act(state=state_sarsa, discrete_state=discrete_state_sarsa)
+            )
 
             # MultiAgentAction accepts one action per controlled vehicle.
             next_obs_tuple, rewards, terminated, truncated, info = env.step((action_dqn, action_sarsa))
@@ -368,10 +423,10 @@ def main():
             obs_tuple = next_obs_tuple
             draw_hud((action_dqn, action_sarsa), controlled, terminated_tuple, truncated_tuple)
             pygame.display.flip()
-            clock.tick(60)
+            clock.tick(max(1, args.render_fps))
 
             # If either agent crashes, stop stepping and show the result HUD.
-            if any(terminated_tuple) or any(truncated_tuple) or step >= args.duration - 1:
+            if all(terminated_tuple) or any(truncated_tuple) or step >= settings["duration"] - 1:
                 break
 
         print(f"\nEpisode Ended!")

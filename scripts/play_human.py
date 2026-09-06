@@ -1,191 +1,241 @@
-"""
-Standalone PyGame script for real-time Human Training.
-Run this instead of Streamlit for a smooth driving experience!
+"""Native PyGame human-driving recorder with responsive held-key controls."""
 
-Controls are shown on a pre-game instruction screen before the
-highway window opens.
-"""
-import sys
+from __future__ import annotations
+
 import argparse
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pygame
+
+from src.envs.actions import Action, action_name
+from src.human.control_bindings import active_actions, load_control_profiles
 from src.human.episode_manager import EpisodeManager
-from src.envs.actions import action_name
 
 
-def show_instructions(vehicle: str) -> bool:
-    """
-    Show a PyGame instruction screen.  Returns True if the user
-    presses ENTER to start, False if they close / press ESC.
-    """
-    screen = pygame.display.set_mode((660, 340))
-    pygame.display.set_caption(f"Human Training — Vehicle {vehicle}")
-    font_big = pygame.font.SysFont("consolas", 28, bold=True)
-    font = pygame.font.SysFont("consolas", 18)
+RENDER_FPS = 60
+DECISION_HZ = 15
+PYGAME_KEYS = {
+    "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
+    "up": pygame.K_UP, "down": pygame.K_DOWN,
+    "a": pygame.K_a, "d": pygame.K_d, "w": pygame.K_w,
+    "s": pygame.K_s, "space": pygame.K_SPACE,
+}
 
-    lines = [
-        f"HUMAN TRAINING — Vehicle {vehicle} ({'DQN' if vehicle == 'R' else 'SARSA'})",
-        "",
-        "Drive the car and record a demonstration",
-        "for the AI to learn from.",
-        "",
-        "  ↑  Arrow Up     — Accelerate",
-        "  ↓  Arrow Down   — Brake",
-        "  ←  Arrow Left   — Change lane left",
-        "  →  Arrow Right  — Change lane right",
-        "  ESC              — Quit & discard",
-        "",
-        "Press ENTER to start driving...",
-    ]
 
-    screen.fill((30, 30, 36))
-    for i, line in enumerate(lines):
-        f = font_big if i == 0 else font
-        color = (255, 145, 0) if i == 0 else (200, 200, 200)
-        if "ENTER" in line:
-            color = (0, 229, 255)
-        surf = f.render(line, True, color)
-        screen.blit(surf, (30, 20 + i * 26))
-    pygame.display.flip()
+def profile_summary(profile: dict[Action, tuple[str, ...]]) -> str:
+    def keys(action: Action) -> str:
+        return "/".join(key.upper() for key in profile[action]) or "-"
+    return f"{keys(Action.FASTER)} accelerate   {keys(Action.SLOWER)} brake   {keys(Action.LANE_LEFT)}/{keys(Action.LANE_RIGHT)} lanes"
+
+
+def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tuple[str, ...]]], profile_name: str) -> tuple[bool, str]:
+    """Show editable pre-drive settings; return start choice and profile."""
+    screen = pygame.display.set_mode((740, 380))
+    pygame.display.set_caption(f"Human Training - Vehicle {vehicle}")
+    title = pygame.font.SysFont("consolas", 27, bold=True)
+    font = pygame.font.SysFont("consolas", 17)
+    clock = pygame.time.Clock()
+    profile_names = list(profiles)
 
     while True:
+        screen.fill((24, 26, 33))
+        lines = [
+            (f"HUMAN TRAINING - VEHICLE {vehicle}", (0, 229, 255), title),
+            ("Configure the road, then press ENTER to drive.", (220, 223, 230), font),
+            (f"Traffic: {settings['vehicles_count']} NPCs  |  density: {settings['vehicles_density']:.1f}", (235, 235, 235), font),
+            (f"Initial speed: {settings['target_speed']:.1f} m/s  |  duration: {settings['duration']} s", (235, 235, 235), font),
+            (f"Controls: {profile_name.upper()}  -  {profile_summary(profiles[profile_name])}", (255, 166, 77), font),
+            ("UP/DOWN NPCs  LEFT/RIGHT density  [/] speed  -/+ duration  C profile", (175, 182, 194), font),
+            ("In drive: P pause  H HUD  [/] target speed  ESC discard", (175, 182, 194), font),
+            ("ENTER start    ESC quit", (0, 229, 255), font),
+        ]
+        for index, (line, color, line_font) in enumerate(lines):
+            screen.blit(line_font.render(line, True, color), (26, 26 + index * 39))
+        pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False
+                return False, profile_name
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    return True
+                    return True, profile_name
                 if event.key == pygame.K_ESCAPE:
-                    return False
+                    return False, profile_name
+                if event.key == pygame.K_c:
+                    profile_name = profile_names[(profile_names.index(profile_name) + 1) % len(profile_names)]
+                elif event.key == pygame.K_UP:
+                    settings["vehicles_count"] = min(60, settings["vehicles_count"] + 1)
+                elif event.key == pygame.K_DOWN:
+                    settings["vehicles_count"] = max(4, settings["vehicles_count"] - 1)
+                elif event.key == pygame.K_RIGHT:
+                    settings["vehicles_density"] = min(3.0, round(settings["vehicles_density"] + 0.1, 1))
+                elif event.key == pygame.K_LEFT:
+                    settings["vehicles_density"] = max(0.2, round(settings["vehicles_density"] - 0.1, 1))
+                elif event.key == pygame.K_RIGHTBRACKET:
+                    settings["target_speed"] = min(30.0, settings["target_speed"] + 1.0)
+                elif event.key == pygame.K_LEFTBRACKET:
+                    settings["target_speed"] = max(8.0, settings["target_speed"] - 1.0)
+                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
+                    settings["duration"] = min(600, settings["duration"] + 30)
+                elif event.key == pygame.K_MINUS:
+                    settings["duration"] = max(30, settings["duration"] - 30)
+        clock.tick(RENDER_FPS)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Human Training Interface")
-    parser.add_argument("vehicle", type=str, choices=["R", "S"], help="Vehicle to record data for: R (DQN) or S (SARSA)")
-    parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
-    parser.add_argument("--duration", type=int, default=120, help="Max duration of the episode in steps")
-    parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier")
-    
+def make_driver_visible(mgr: EpisodeManager, vehicle: str, target_speed: float) -> None:
+    """Give the human vehicle an unmistakable colour and a modest size boost."""
+    env = mgr._env_mgr._env.unwrapped  # Native renderer needs the controlled vehicle.
+    for driver in getattr(env, "controlled_vehicles", []):
+        driver.color = (0, 229, 255) if vehicle == "R" else (255, 145, 0)
+        driver.LENGTH = 6.5
+        driver.WIDTH = 2.6
+        driver.speed = target_speed
+        driver.target_speed = target_speed
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Responsive native PyGame human-training recorder")
+    parser.add_argument("vehicle", choices=["R", "S"], help="R (DQN) or S (SARSA) demonstration")
+    parser.add_argument("--vehicles-count", type=int, default=15, help="NPC vehicles (default: 15)")
+    parser.add_argument("--duration", type=int, default=120, help="Episode duration in real-time seconds (default: 120)")
+    parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier (default: 1.0)")
+    parser.add_argument("--target-speed", type=float, default=18.0, help="Initial speed in m/s (default: 18.0)")
     args = parser.parse_args()
-    vehicle = args.vehicle.upper()
+
+    settings = {"vehicles_count": args.vehicles_count, "vehicles_density": args.vehicles_density,
+                "duration": args.duration, "target_speed": args.target_speed}
+    default_profile, profiles = load_control_profiles()
 
     pygame.init()
-
-    # ── Show instructions and wait for ENTER ─────────────────────
-    if not show_instructions(vehicle):
+    started, profile_name = show_setup(args.vehicle, settings, profiles, default_profile)
+    if not started:
         pygame.quit()
         return
-
-    # Close the instruction window — highway-env creates its own
     pygame.display.quit()
 
-    # ── Run the episode ──────────────────────────────────────────
-    config_overrides = {
-        "vehicles_count": args.vehicles_count,
-        "duration": args.duration,
-        "vehicles_density": args.vehicles_density
+    config = {
+        "vehicles_count": settings["vehicles_count"], "vehicles_density": settings["vehicles_density"],
+        "duration": settings["duration"], "initial_speed": settings["target_speed"],
+        "simulation_frequency": 30, "policy_frequency": DECISION_HZ, "screen_height": 390,
     }
+    mgr = EpisodeManager(render_mode="human", max_steps=settings["duration"] * DECISION_HZ)
+    result = mgr.start(vehicle=args.vehicle, config_overrides=config)
+    make_driver_visible(mgr, args.vehicle, settings["target_speed"])
 
-    mgr = EpisodeManager(render_mode="human", max_steps=args.duration)
-    result = mgr.start(vehicle=vehicle, config_overrides=config_overrides)
     clock = pygame.time.Clock()
-    hud_font = pygame.font.SysFont("consolas", 16)
-    hud_small = pygame.font.SysFont("consolas", 13)
-    show_hud = True
+    hud_font = pygame.font.SysFont("consolas", 15)
+    show_hud, paused = True, False
+    decision_elapsed, action_turn = 0.0, 0
+    last_applied = Action.IDLE
+    button_bounds: dict[str, pygame.Rect] = {}
 
-    def draw_hud(current_result, status="DRIVING"):
+    def adjust_target_speed(delta: float) -> None:
+        settings["target_speed"] = min(30.0, max(8.0, settings["target_speed"] + delta))
+        env = mgr._env_mgr._env.unwrapped
+        for driver in getattr(env, "controlled_vehicles", []):
+            driver.target_speed = settings["target_speed"]
+
+    def draw_hud(held: list[Action]) -> None:
+        button_bounds.clear()
         if not show_hud:
             return
         surface = pygame.display.get_surface()
         if surface is None:
             return
         width, height = surface.get_size()
-        panel_height = 104
+        panel_height = 94
         panel = pygame.Surface((width, panel_height), pygame.SRCALPHA)
-        panel.fill((22, 22, 28, 228))
+        panel.fill((18, 20, 27, 232))
         surface.blit(panel, (0, height - panel_height))
-        surface.blit(
-            hud_font.render(f"HUMAN {vehicle} LIVE DATA  |  {status}", True, (0, 229, 255)),
-            (12, height - 96),
-        )
-        action = current_result.action_taken if current_result.action_taken is not None else 1
-        line = (
-            f"step={mgr.step_count:03d}  action={action_name(int(action)):<11} "
-            f"reward={mgr.total_reward:>7.2f}  lane={current_result.lane_index}  "
-            f"speed={current_result.speed:>5.1f} m/s ({current_result.speed * 3.6:>5.1f} km/h)"
-        )
-        surface.blit(hud_small.render(line, True, (235, 235, 235)), (12, height - 72))
-        surface.blit(
-            hud_small.render("ARROWS drive   H HUD   S save   X discard   ESC close", True, (210, 210, 215)),
-            (12, height - 51),
-        )
+        status = "PAUSED" if paused else "DRIVING"
+        held_label = "+".join(action_name(action) for action in held) if held else "IDLE"
+        accent = (255, 196, 77) if paused else (0, 229, 255)
+        surface.blit(hud_font.render(f"HUMAN {args.vehicle} | {status} | INPUT: {held_label}", True, accent), (12, height - 84))
+        stats = (f"applied={action_name(last_applied):<10}  step={mgr.step_count:04d}  "
+                 f"reward={mgr.total_reward:7.2f}  lane={result.lane_index}  "
+                 f"speed={result.speed:5.1f} m/s  target={settings['target_speed']:4.1f}")
+        surface.blit(hud_font.render(stats, True, (238, 238, 240)), (12, height - 60))
+        controls = f"{profile_name.upper()} drive | click controls or P and [/] | H HUD | ESC discard"
+        surface.blit(hud_font.render(controls, True, (185, 191, 204)), (12, height - 34))
+        labels = [("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD")]
+        x = width - 12
+        for button_id, label in reversed(labels):
+            button = pygame.Rect(x - 76, height - 88, 70, 22)
+            pygame.draw.rect(surface, (53, 62, 76), button, border_radius=3)
+            pygame.draw.rect(surface, accent, button, width=1, border_radius=3)
+            text = hud_font.render(label, True, (238, 238, 240))
+            surface.blit(text, text.get_rect(center=button.center))
+            button_bounds[button_id] = button
+            x -= 82
 
     try:
         while not mgr.is_done:
+            elapsed = clock.tick(RENDER_FPS) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     mgr.discard()
                     return
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_h:
-                        show_hud = not show_hud
-                    elif event.key == pygame.K_s:
-                        path = mgr.save()
-                        print(f"Saved demonstration from GUI control: {path}")
-                        return
-                    elif event.key == pygame.K_x:
+                    if event.key == pygame.K_ESCAPE:
                         mgr.discard()
-                        print("Episode discarded from GUI control.")
                         return
+                    if event.key == pygame.K_p:
+                        paused = not paused
+                        decision_elapsed = 0.0
+                    elif event.key == pygame.K_h:
+                        show_hud = not show_hud
+                    elif event.key == pygame.K_LEFTBRACKET:
+                        adjust_target_speed(-1.0)
+                    elif event.key == pygame.K_RIGHTBRACKET:
+                        adjust_target_speed(1.0)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if button_bounds.get("pause", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        paused = not paused
+                        decision_elapsed = 0.0
+                    elif button_bounds.get("slower", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        adjust_target_speed(-1.0)
+                    elif button_bounds.get("faster", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        adjust_target_speed(1.0)
+
             keys = pygame.key.get_pressed()
-
-            if keys[pygame.K_ESCAPE]:
-                mgr.discard()
-                print("ESC pressed. Episode discarded.")
-                return
-
-            action_key = " "
-            if keys[pygame.K_LEFT]:
-                action_key = "arrowleft"
-            elif keys[pygame.K_RIGHT]:
-                action_key = "arrowright"
-            elif keys[pygame.K_UP]:
-                action_key = "arrowup"
-            elif keys[pygame.K_DOWN]:
-                action_key = "arrowdown"
-
-            result = mgr.act(action_key)
-            draw_hud(result)
+            pressed = {name for name, keycode in PYGAME_KEYS.items() if keys[keycode]}
+            held = active_actions(profiles[profile_name], pressed)
+            if not paused:
+                decision_elapsed += elapsed
+                while decision_elapsed >= 1 / DECISION_HZ and not mgr.is_done:
+                    action = held[action_turn % len(held)] if held else Action.IDLE
+                    action_turn += 1
+                    result = mgr.act_action(action)
+                    last_applied = action
+                    decision_elapsed -= 1 / DECISION_HZ
+            draw_hud(held)
             pygame.display.flip()
-            clock.tick(10)
 
-        print("\nEpisode finished. Use the GUI to save or discard it.")
         while mgr.is_active:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT or (
-                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-                ):
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     mgr.discard()
                     return
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_h:
-                        show_hud = not show_hud
-                    elif event.key == pygame.K_s:
-                        path = mgr.save()
-                        print(f"Saved demonstration from GUI control: {path}")
-                    elif event.key == pygame.K_x:
-                        mgr.discard()
-                        print("Episode discarded from GUI control.")
-            draw_hud(result, "COMPLETE — S SAVE / X DISCARD")
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                    path = mgr.save()
+                    print(f"Saved demonstration: {path}")
+                    return
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_x:
+                    mgr.discard()
+                    print("Episode discarded.")
+                    return
+            draw_hud([])
+            surface = pygame.display.get_surface()
+            if surface is not None:
+                surface.blit(hud_font.render("COMPLETE: S save demonstration | X discard | ESC close", True, (255, 196, 77)), (12, 12))
             pygame.display.flip()
-            clock.tick(30)
-        print(f"✅ Successfully saved demonstration to: {path}")
-
+            clock.tick(RENDER_FPS)
     except KeyboardInterrupt:
-        print("\nInterrupted! Discarding episode...")
-        mgr.discard()
+        if mgr.is_active:
+            mgr.discard()
     finally:
         pygame.quit()
 

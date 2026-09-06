@@ -64,8 +64,10 @@ pip install -r requirements.txt
 
 ### Collect human demonstrations
 
-Use the native PyGame window. ENTER starts; arrow keys drive; ESC discards the
-active episode.
+Use the native PyGame window. The default profile is arrow keys; press `C` on
+the setup screen to use WASD instead. `P` pauses without recording a step, and
+`ESC` discards the active episode. The control file is
+`configs/control_bindings.json` if you need to remap either profile.
 
 ```powershell
 python scripts/play_human.py R
@@ -95,8 +97,20 @@ during the native session.
 The native windows show live step, action, reward, lane, speed, and terminal
 status data. In multi-agent mode, R/DQN and S/SARSA are placed side-by-side in
 adjacent lanes. `SPACE` pauses, `H` toggles telemetry, `S` saves checkpoints,
-and `ESC` closes after a crash or timeout. Human mode uses arrow keys to drive,
-`S` to save, and `X` to discard a completed recording.
+and `ESC` closes after a crash or timeout. Human mode samples held keys at
+60 FPS and applies a discrete decision at 15 Hz. Its HUD shows both held input
+and the action applied. Press `S` to save, or `X` to discard, only after a
+recording has completed.
+
+In human mode, the HUD also has clickable **Pause**, **- SPD**, and **+ SPD**
+controls. NPC count and density are chosen on the setup screen because they
+are created when the HighwayEnv episode resets.
+
+Before either native session starts, the GUI provides controls for NPC vehicle
+count, traffic density, target speed, and episode duration. Defaults are slower
+than the original runtime: 18 m/s target speed and 12 FPS multi-agent playback.
+In multi-agent mode, one crashed car no longer ends the run; both cars are
+allowed to reach the crashed state.
 
 ### Open the data dashboard
 

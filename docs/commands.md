@@ -16,6 +16,10 @@ Commands
   python scripts/play_human.py R --vehicles-count 20
   ```
 
+  Arrow keys are the default drive profile; press `C` on the setup screen for
+  WASD. `P` pauses without creating a recorded transition. See
+  `configs/control_bindings.json` to remap either profile.
+
 - Agent viewer (native):
 
   ```bash

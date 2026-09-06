@@ -12,15 +12,22 @@ python scripts/play_human.py R
 python scripts/play_human.py S
 ```
 
-The instruction window waits for ENTER. In the highway window:
+The setup window lets you set traffic, initial speed, duration, and the
+control profile before pressing ENTER. In the highway window:
 
 - Arrow Up accelerates.
 - Arrow Down brakes.
 - Arrow Left and Right change lanes.
+- Press `C` on the setup screen to switch to the WASD profile; both profiles
+  are configurable in `configs/control_bindings.json`.
+- `P` pauses cleanly without recording a transition. `[` and `]` adjust target
+  speed during the drive; the same pause and speed controls are clickable in
+  the live HUD.
 - ESC discards the active episode.
 
-When the episode ends normally, the recorder saves a validated JSONL file in
-`data/human_demonstrations/`. Adjust traffic with the flags documented in
+The HUD displays the currently held action(s) and the last discrete action
+applied. When the episode ends, press `S` to save or `X` to discard the
+validated JSONL recording in `data/human_demonstrations/`. Adjust traffic with the flags documented in
 [`tutorials/commands.md`](commands.md), for example:
 
 ```powershell

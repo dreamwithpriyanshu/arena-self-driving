@@ -1,0 +1,19 @@
+{
+  "default_profile": "arrows",
+  "profiles": {
+    "arrows": {
+      "LANE_LEFT": ["left"],
+      "LANE_RIGHT": ["right"],
+      "FASTER": ["up"],
+      "SLOWER": ["down"],
+      "IDLE": ["space"]
+    },
+    "wasd": {
+      "LANE_LEFT": ["a"],
+      "LANE_RIGHT": ["d"],
+      "FASTER": ["w"],
+      "SLOWER": ["s"],
+      "IDLE": ["space"]
+    }
+  }
+}

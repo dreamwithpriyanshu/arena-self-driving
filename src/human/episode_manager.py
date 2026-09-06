@@ -16,6 +16,7 @@ from typing import Any, Optional
 from src.data.recorder import TransitionRecorder
 from src.data.schemas import Transition
 from src.human.keyboard_controller import KeyboardController
+from src.envs.actions import validate_action
 from src.simulation.env_manager import EnvManager, StepResult
 
 logger = logging.getLogger(__name__)
@@ -120,6 +121,11 @@ class EpisodeManager:
 
         # Reset environment
         result = self._env_mgr.reset(seed=seed)
+        initial_speed = merged_config.get("initial_speed")
+        if initial_speed is not None:
+            for controlled_vehicle in getattr(self._env_mgr._env.unwrapped, "controlled_vehicles", []):
+                controlled_vehicle.speed = float(initial_speed)
+                controlled_vehicle.target_speed = float(initial_speed)
         self._prev_result = result
         self._episode_active = True
         self._episode_done = False
@@ -157,6 +163,10 @@ class EpisodeManager:
         RuntimeError
             If no episode is active or the episode is already done.
         """
+        return self.act_action(self._keyboard.key_to_action(key))
+
+    def act_action(self, action: int) -> StepResult:
+        """Apply a validated discrete action and record its transition."""
         if not self._episode_active:
             raise RuntimeError("No episode active. Call start() first.")
         if self._episode_done:
@@ -166,8 +176,7 @@ class EpisodeManager:
         if self._prev_result is None:
             raise RuntimeError("Internal error: no previous result.")
 
-        # Translate key to action
-        action = self._keyboard.key_to_action(key)
+        action = validate_action(action)
 
         # Step the environment
         result = self._env_mgr.step(action)
