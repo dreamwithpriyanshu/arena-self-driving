@@ -29,6 +29,7 @@ RUNS_DIR = ARTIFACTS_DIR / "runs"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 DOCS_DIR = PROJECT_ROOT / "docs"
 DOCUMENTS = {
+    "project": "project_documentation.md",
     "architecture": "architecture.md",
     "algorithm": "algorithm_notes.md",
     "commands": "commands.md",
@@ -36,7 +37,6 @@ DOCUMENTS = {
     "backend": "backend_notes.md",
     "timeline": "timeline.md",
     "ui": "ui_design_system.md",
-    "render-free": "render_free_web_service.md",
 }
 
 

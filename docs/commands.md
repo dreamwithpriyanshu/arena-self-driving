@@ -14,6 +14,10 @@ python -m backend.main
 Open `http://127.0.0.1:8000`. The browser can start local human recording,
 headless training, and local agent playback.
 
+If port 8000 is already in use, reuse the existing server or stop only the
+specific process holding that port before restarting. Do not start duplicate
+servers and expect them to share jobs.
+
 ## Human demonstrations (required for warm-start)
 
 ```powershell
@@ -164,6 +168,31 @@ changes can be evaluated in both directions. The `+/-` control allows
 reward range tops out at `30 m/s`, so speeds above 30 remain physically valid
 but do not receive additional high-speed reward.
 
+## Backend and hosted operation
+
+The browser calls FastAPI; it does not train in JavaScript:
+
+```text
+Browser -> FastAPI -> scripts/train.py -> EnvManager -> HighwayEnv
+                                      -> SARSA Q-table
+                                      -> JSONL history/checkpoint
+```
+
+The backend validates all training values, creates an opaque run directory,
+starts a fixed argument list with `shell=False`, and streams JSONL metrics over
+WebSockets. If the socket is unavailable, the browser polls saved metrics.
+Only one browser training worker can run at once.
+
+For a hosted headless process:
+
+```powershell
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+Human PyGame recording is local-only. Hosted agent playback runs one headless
+evaluation. Hosted files may be temporary; publishing remains an explicit
+checkpoint-copy and Git workflow.
+
 ## Publish a checkpoint to GitHub
 
 Publishing is deliberately explicit; commits do not automatically publish a
@@ -217,6 +246,20 @@ Existing runtime files are not overwritten.
 - `publish_model.py` copies the runtime checkpoint and latest history into
   `published/`; Git commands are still manual.
 - `pytest` and `compileall` validate code and do not train the model.
+
+## Documentation and UI
+
+The browser Documentation section loads the allowlisted Markdown pages returned
+by `GET /documentation`. The current UI uses a warm neutral palette, muted
+teal primary actions, responsive cards, normal scrollable documentation, and
+short hover/focus transitions. It intentionally avoids neon colors and heavy
+animation.
+
+Available documentation includes:
+
+```text
+project, architecture, algorithm, commands, backend, security, timeline, ui
+```
 
 ## What happens during one training episode?
 
