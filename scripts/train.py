@@ -33,8 +33,14 @@ def main():
     parser.add_argument("--log-interval", type=int, default=1, help="Print metrics every N episodes")
     parser.add_argument("--history-mode", type=str, choices=["per-run","append"], default="per-run", help="How to persist training history: per-run timestamped file or append to single file")
     parser.add_argument("--history-dir", type=str, default="artifacts", help="Directory to store training history files")
+    parser.add_argument("--greedy", action="store_true", help="Run training with greedy policy (epsilon=0) — useful for deterministic runs/evaluation")
     
     args = parser.parse_args()
+
+    # Apply greedy flag: force epsilon to 0 and disable decay
+    if args.greedy:
+        args.epsilon_start = 0.0
+        args.epsilon_decay = 1.0
 
     # Device selection (allow override)
     if args.device == "auto":
@@ -92,12 +98,31 @@ def main():
     # Prepare training history file according to the requested mode
     history_dir = Path(args.history_dir)
     history_dir.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     if args.history_mode == "per-run":
-        ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-        history_path = history_dir / f"training_history_{ts}.jsonl"
+        run_id = ts
+        history_path = history_dir / f"training_history_{run_id}.jsonl"
     else:
         # append to a single canonical history file for backward compatibility
+        # still create a per-run metadata file so runs are identifiable
+        run_id = ts
         history_path = history_dir / "training_history.jsonl"
+
+    # Persist run metadata alongside the history file for observability
+    try:
+        import json
+        meta_path = history_dir / f"training_history_{run_id}.meta.json"
+        meta = {
+            "run_id": run_id,
+            "history_mode": args.history_mode,
+            "history_path": str(history_path),
+            "args": {k: v for k, v in vars(args).items()},
+            "created_at": time.time(),
+        }
+        with meta_path.open("w", encoding="utf-8") as mh:
+            json.dump(meta, mh, indent=2)
+    except Exception as e:
+        print(f"[!] Warning: failed to write run metadata: {e}")
 
     # Environment
     config_overrides = {

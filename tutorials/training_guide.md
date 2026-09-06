@@ -52,9 +52,18 @@ Once you have recorded demonstrations, you can train the agents using the powerf
 4. Checkpoints are saved to `artifacts/checkpoints` periodically (controlled by `--save-freq`).
 
 ### Training history files
-By default the trainer writes a per-run, timestamped NDJSON file to `artifacts/` named like `training_history_YYYYMMDD_HHMMSS.jsonl`. The Streamlit dashboard will detect recent run files and let you load them from the sidebar.
+By default the trainer writes a per-run, timestamped NDJSON file to `artifacts/` named like `training_history_YYYYMMDD_HHMMSS.jsonl`. The trainer also saves a companion metadata file `training_history_YYYYMMDD_HHMMSS.meta.json` containing the CLI arguments and run id. The Streamlit dashboard will detect recent run files and let you load them from the sidebar; the sidebar shows the run timestamp and CLI args for each run.
 
-If you prefer the old single-file behaviour, run with `--history-mode append` and the trainer will append episode records to `artifacts/training_history.jsonl`.
+If you prefer the old single-file behaviour, run with `--history-mode append` and the trainer will append episode records to `artifacts/training_history.jsonl`. Even in append mode a per-run metadata file is created so runs remain identifiable.
+
+### Greedy / deterministic runs
+Use `--greedy` to run training with a greedy policy (epsilon=0). This is useful for deterministic evaluation runs or debugging when you want no exploration:
+
+```bash
+python scripts/train.py --agent R --episodes 50 --greedy --history-mode per-run
+```
+
+Note: greedy mode disables exploration by setting epsilon to 0 and disabling decay for the run.
 
 ### Example: quick training with GPU
 ```bash

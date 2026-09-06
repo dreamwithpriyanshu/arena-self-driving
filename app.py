@@ -48,14 +48,38 @@ file_names = [str(p) for p in files]
 selected_file = None
 if file_names:
     selected = st.sidebar.selectbox("Select run file", file_names, index=0)
+
+    # Show run metadata if available
+    meta_path = Path(selected).with_suffix('.meta.json')
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding='utf-8'))
+            st.sidebar.markdown("**Run metadata**")
+            st.sidebar.write(f"Run ID: {meta.get('run_id')}")
+            st.sidebar.write(f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(meta.get('created_at', 0)))}")
+            if 'args' in meta:
+                st.sidebar.markdown("**CLI args**")
+                st.sidebar.json(meta['args'])
+        except Exception as e:
+            st.sidebar.warning(f"Failed to read meta: {e}")
+
     if st.sidebar.button("Load selected run"):
         try:
             with Path(selected).open("r", encoding="utf-8") as fh:
                 lines = [line.strip() for line in fh if line.strip()]
                 st.session_state.training_history = [json.loads(l) for l in lines]
+            st.session_state._training_history_file = str(selected)
             st.sidebar.success("Loaded")
         except Exception as e:
             st.sidebar.error(f"Failed to load: {e}")
+
+    # Quick action: open artifacts folder in OS file explorer (works on local machines)
+    if st.sidebar.button("Open artifacts folder"):
+        try:
+            import os
+            os.startfile(str(history_dir.resolve()))
+        except Exception as e:
+            st.sidebar.error(f"Failed to open folder: {e}")
 else:
     st.sidebar.info("No training history runs found in artifacts/")
 
