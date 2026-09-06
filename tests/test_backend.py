@@ -24,4 +24,4 @@ def test_training_command_is_fixed_argument_vector() -> None:
 
 def test_expected_routes_are_registered() -> None:
     paths = {route.path for route in app.routes}
-    assert {"/", "/training/start", "/training/status/{run_id}", "/training/stop/{run_id}", "/runs", "/ws/training/{run_id}"} <= paths
+    assert {"/", "/training/start", "/training/status/{run_id}", "/training/stop/{run_id}", "/sessions/human/start", "/sessions/agent/start", "/demonstrations/summary", "/runs", "/documentation", "/documentation/{document_id}", "/ws/training/{run_id}"} <= paths

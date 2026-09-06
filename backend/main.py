@@ -20,10 +20,22 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from src.data.loader import get_dataset_summary
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 RUNS_DIR = ARTIFACTS_DIR / "runs"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
+DOCS_DIR = PROJECT_ROOT / "docs"
+DOCUMENTS = {
+    "architecture": "architecture.md",
+    "algorithm": "algorithm_notes.md",
+    "commands": "commands.md",
+    "security": "security_notes.md",
+    "backend": "backend_notes.md",
+    "timeline": "timeline.md",
+    "ui": "ui_design_system.md",
+}
 
 
 class TrainingRequest(BaseModel):
@@ -116,6 +128,34 @@ registry = JobRegistry()
 app = FastAPI(title="Arena SARSA Training Control", docs_url=None, redoc_url=None)
 
 
+class NativeSessionRegistry:
+    """Tracks the desktop PyGame windows launched from the local frontend."""
+
+    def __init__(self) -> None:
+        self._processes: dict[str, subprocess.Popen[bytes]] = {}
+        self._lock = threading.Lock()
+
+    def start(self, mode: Literal["human", "agent"]) -> dict[str, object]:
+        with self._lock:
+            existing = self._processes.get(mode)
+            if existing and existing.poll() is None:
+                raise HTTPException(status_code=409, detail=f"The {mode} window is already open.")
+            script_name = "play_human.py" if mode == "human" else "play_agent.py"
+            try:
+                process = subprocess.Popen(
+                    [sys.executable, str(PROJECT_ROOT / "scripts" / script_name)],
+                    cwd=PROJECT_ROOT,
+                    shell=False,
+                )
+            except OSError as exc:
+                raise HTTPException(status_code=500, detail=f"Unable to open the {mode} window.") from exc
+            self._processes[mode] = process
+            return {"mode": mode, "pid": process.pid, "status": "running"}
+
+
+native_sessions = NativeSessionRegistry()
+
+
 def job_payload(job: TrainingJob) -> dict[str, object]:
     return asdict(job)
 
@@ -187,6 +227,24 @@ def start_training(request: TrainingRequest) -> dict[str, object]:
     return job_payload(registry.create(run_id, process, history_dir))
 
 
+@app.post("/sessions/human/start", status_code=201)
+def start_human_session() -> dict[str, object]:
+    """Open the existing native PyGame demonstration recorder."""
+    return native_sessions.start("human")
+
+
+@app.post("/sessions/agent/start", status_code=201)
+def start_agent_session() -> dict[str, object]:
+    """Open the existing native PyGame SARSA playback window."""
+    return native_sessions.start("agent")
+
+
+@app.get("/demonstrations/summary")
+def demonstration_summary() -> dict[str, object]:
+    """Expose validated human-driving evidence without allowing file paths."""
+    return get_dataset_summary()
+
+
 @app.get("/training/status/{run_id}")
 def training_status(run_id: str) -> dict[str, object]:
     job = registry.get(run_id)
@@ -226,6 +284,22 @@ def run_metrics(artifact_run_id: str) -> list[dict[str, object]]:
         if metadata_path.parent.name == artifact_run_id:
             return read_metrics(metadata_path.with_name(metadata_path.name.replace(".meta.json", ".jsonl")))
     raise HTTPException(status_code=404, detail="Unknown run ID.")
+
+
+@app.get("/documentation")
+def list_documentation() -> list[dict[str, str]]:
+    return [{"id": doc_id, "filename": filename} for doc_id, filename in DOCUMENTS.items()]
+
+
+@app.get("/documentation/{document_id}")
+def read_documentation(document_id: str) -> dict[str, str]:
+    filename = DOCUMENTS.get(document_id)
+    if filename is None:
+        raise HTTPException(status_code=404, detail="Unknown documentation page.")
+    try:
+        return {"id": document_id, "filename": filename, "content": (DOCS_DIR / filename).read_text(encoding="utf-8")}
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail="Unable to read documentation.") from exc
 
 
 @app.websocket("/ws/training/{run_id}")

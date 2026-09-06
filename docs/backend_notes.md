@@ -19,3 +19,9 @@ The browser frontend is plain HTML, CSS, and JavaScript served by FastAPI.
 This intentionally avoids a JavaScript build chain for a small local control
 surface. Browser-started runs write their history below `artifacts/runs/`; the
 `/runs` API also lists existing history files directly below `artifacts/`.
+
+The **Drive and play** controls launch the existing local PyGame programs:
+human driving records demonstrations, and agent play visualises the saved
+SARSA checkpoint. These remain native windows because PyGame cannot be
+embedded into a browser page. The API uses fixed script paths and `shell=False`
+for those launches as well.

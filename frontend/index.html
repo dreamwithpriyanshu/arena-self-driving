@@ -8,9 +8,25 @@
 </head>
 <body>
   <main>
-    <header><p class="eyebrow">LOCAL TRAINING CONTROL</p><h1>Arena <span>S</span>ARSA</h1><p>Start, observe, stop, and review training runs.</p></header>
-    <section class="panel controls">
-      <h2>New training run</h2><p id="status" aria-live="polite">Ready</p>
+    <header>
+      <p class="eyebrow">LOCAL SARSA WORKBENCH</p>
+      <h1>Arena <span>S</span>ARSA</h1>
+      <p>Human demonstrations, model playback, training controls, live metrics, and evidence review in one local interface.</p>
+      <nav><a href="#drive">Drive</a><a href="#train">Train</a><a href="#analytics">Analytics</a><a href="#docs">Documentation</a></nav>
+    </header>
+
+    <section class="panel" id="drive">
+      <h2>Drive and play</h2>
+      <p class="muted">These actions open the existing native PyGame windows on this computer. The browser launches them; it does not attempt to embed a desktop window.</p>
+      <div class="action-grid">
+        <article><h3>Human demonstration</h3><p>Drive with arrow keys. Saved episodes become warm-start data for SARSA.</p><button class="secondary" data-session="human">Open human drive</button></article>
+        <article><h3>SARSA playback</h3><p>Watch the saved SARSA checkpoint act in the native simulation.</p><button class="secondary" data-session="agent">Open agent play</button></article>
+      </div>
+      <p id="session-status" class="status" aria-live="polite">No native window launched from this page.</p><p id="demo-summary" class="muted">Loading demonstration summary…</p>
+    </section>
+
+    <section class="panel controls" id="train">
+      <div class="section-heading"><div><h2>New SARSA training run</h2><p class="muted">Only bounded, validated settings are accepted.</p></div><p id="status" class="status" aria-live="polite">Ready</p></div>
       <form id="training-form">
         <label>Model<select name="agent_type"><option value="S">S — SARSA</option></select></label>
         <label>Episodes<input name="episodes" type="number" min="1" max="10000" value="50"></label>
@@ -22,12 +38,26 @@
         <label>Traffic vehicles<input name="vehicles_count" type="number" min="1" max="50" value="15"></label>
         <label>Episode duration<input name="duration" type="number" min="1" max="5000" value="300"></label>
         <label>Seed (optional)<input name="seed" type="number" min="0" max="2147483647"></label>
-        <label class="check"><input name="warm_start" type="checkbox"> Warm-start from demonstrations</label>
-        <div><button id="start" type="submit">Start training</button><button id="stop" type="button" disabled>Stop run</button></div>
+        <label class="check"><input name="warm_start" type="checkbox"> Warm-start from saved demonstrations</label>
+        <div class="form-actions"><button id="start" type="submit">Start training</button><button id="stop" class="danger" type="button" disabled>Stop run</button></div>
       </form>
     </section>
-    <section class="panel"><h2>Live reward</h2><canvas id="chart" width="900" height="280" aria-label="Total reward by episode"></canvas><p id="metrics">No metrics received.</p></section>
-    <section class="panel"><h2>Past runs</h2><p>Choose a run to load its recorded reward history.</p><div id="runs">Loading runs…</div></section>
+
+    <section class="panel" id="analytics">
+      <div class="section-heading"><div><h2>Training analytics</h2><p id="metrics" class="muted">Start a run or choose saved evidence below.</p></div><span class="legend"><i></i> SARSA (S)</span></div>
+      <div class="chart-grid">
+        <article><h3>Total reward</h3><canvas data-field="total_reward" data-label="reward" width="500" height="220"></canvas></article>
+        <article><h3>Survival steps</h3><canvas data-field="steps" data-label="steps" width="500" height="220"></canvas></article>
+        <article><h3>Exploration epsilon</h3><canvas data-field="epsilon" data-label="epsilon" width="500" height="220"></canvas></article>
+        <article><h3>Average TD error</h3><canvas data-field="avg_td_error" data-label="TD error" width="500" height="220"></canvas></article>
+      </div>
+      <h3>Saved runs</h3><p class="muted">Each browser-started run has its own history and metadata under <code>artifacts/runs/&lt;run-id&gt;/</code>. Earlier history in <code>artifacts/</code> remains available too.</p><div id="runs">Loading saved runs…</div>
+    </section>
+
+    <section class="panel" id="docs">
+      <h2>Project documentation</h2><p class="muted">The same project notes formerly exposed by Streamlit are available here.</p>
+      <div class="docs-layout"><div id="doc-list" role="tablist"></div><pre id="doc-content">Loading documentation…</pre></div>
+    </section>
   </main>
   <script src="/static/app.js"></script>
 </body>
