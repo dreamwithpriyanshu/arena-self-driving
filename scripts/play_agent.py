@@ -14,6 +14,7 @@ from src.agents.sarsa import SARSAAgent
 from src.data.schemas import Transition
 from src.envs.actions import action_name
 from src.simulation.env_manager import EnvManager
+from src.simulation.traffic import maintain_viewer_traffic
 from src.storage import checkpoints_dir, ensure_storage_dirs
 
 
@@ -91,7 +92,7 @@ def tune_vehicle(env_mgr: EnvManager, target_speed: float) -> None:
         driver.speed, driver.target_speed = target_speed, target_speed
 
 
-def balance_viewer_traffic(env_mgr: EnvManager) -> None:
+def balance_viewer_traffic(env_mgr: EnvManager, target_speed: float) -> None:
     """Put part of the NPC traffic behind the ego for a two-sided scene."""
     env = env_mgr._env.unwrapped
     ego = getattr(env, "vehicle", None)
@@ -108,6 +109,7 @@ def balance_viewer_traffic(env_mgr: EnvManager) -> None:
         vehicle.position = lane.position(longitudinal, 0.0)
         vehicle.heading = lane.heading_at(longitudinal)
         vehicle.speed = max(8.0, min(float(vehicle.speed), MAX_TARGET_SPEED))
+    maintain_viewer_traffic(env_mgr, target_speed)
 
 
 def main() -> None:
@@ -145,7 +147,7 @@ def main() -> None:
     })
     result = env_mgr.reset()
     tune_vehicle(env_mgr, settings["target_speed"])
-    balance_viewer_traffic(env_mgr)
+    balance_viewer_traffic(env_mgr, settings["target_speed"])
     pygame.display.set_mode((600, 390))
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 15)
@@ -276,6 +278,7 @@ def main() -> None:
                     action = agent.act(result.raw_state, result.discrete_state)
                     previous = result
                     result = env_mgr.step(action)
+                    maintain_viewer_traffic(env_mgr, settings["target_speed"])
                     cached_frame = None
                     if args.train:
                         metrics = agent.update(Transition(step=env_mgr.step_count - 1, state=previous.raw_state.tolist(), action=action, reward=result.reward, next_state=result.raw_state.tolist(), terminated=result.terminated, truncated=result.truncated, discrete_state=previous.discrete_state, next_discrete_state=result.discrete_state, lane=result.lane_index, speed=result.speed))

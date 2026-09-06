@@ -13,6 +13,7 @@ import pygame
 from src.envs.actions import Action, action_name
 from src.human.control_bindings import active_actions, load_control_profiles
 from src.human.episode_manager import EpisodeManager
+from src.simulation.traffic import maintain_viewer_traffic
 
 
 RENDER_FPS = 60
@@ -109,7 +110,7 @@ def make_driver_visible(mgr: EpisodeManager, vehicle: str, target_speed: float) 
         driver.target_speed = target_speed
 
 
-def balance_viewer_traffic(mgr: EpisodeManager) -> None:
+def balance_viewer_traffic(mgr: EpisodeManager, target_speed: float) -> None:
     """Place part of the NPC traffic behind the human-controlled vehicle."""
     env = mgr._env_mgr._env.unwrapped
     ego = getattr(env, "vehicle", None)
@@ -125,6 +126,7 @@ def balance_viewer_traffic(mgr: EpisodeManager) -> None:
         vehicle.position = lane.position(longitudinal, 0.0)
         vehicle.heading = lane.heading_at(longitudinal)
         vehicle.speed = max(MIN_TARGET_SPEED, min(float(vehicle.speed), MAX_TARGET_SPEED))
+    maintain_viewer_traffic(mgr._env_mgr, target_speed)
 
 
 def main() -> None:
@@ -156,7 +158,7 @@ def main() -> None:
     mgr = EpisodeManager(render_mode="rgb_array", max_steps=settings["duration"] * DECISION_HZ)
     result = mgr.start(vehicle=args.vehicle, config_overrides=config)
     make_driver_visible(mgr, args.vehicle, settings["target_speed"])
-    balance_viewer_traffic(mgr)
+    balance_viewer_traffic(mgr, settings["target_speed"])
     pygame.display.set_mode((600, 390))
 
     clock = pygame.time.Clock()
@@ -288,6 +290,7 @@ def main() -> None:
                 while decision_elapsed >= 1 / DECISION_HZ and not mgr.is_done:
                     action = held[0] if held else Action.IDLE
                     result = mgr.act_action(action)
+                    maintain_viewer_traffic(mgr._env_mgr, settings["target_speed"])
                     cached_frame = None
                     last_applied = action
                     decision_elapsed -= 1 / DECISION_HZ
