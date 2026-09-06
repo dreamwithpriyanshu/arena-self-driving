@@ -1,30 +1,43 @@
 # Architecture
 
-The submission has two deliberately separate runtime surfaces.
+Arena Self-Driving has one learning path and two local presentation surfaces.
 
 ```text
-Arrow-key PyGame GUI -> human recorder -> JSONL demonstrations
-                                      -> SARSA trainer -> Q-table and history
-FastAPI + browser frontend ----------------------------> starts training and reads evidence
+Human drive button -> native PyGame recorder -> validated JSONL demonstrations
+                                                |
+Browser training form -> FastAPI -> scripts/train.py -> SARSA Q-table
+                           |                         -> per-run JSONL metrics
+                           +-> WebSocket -> live browser charts
+
+Agent play button -> native PyGame viewer -> saved SARSA Q-table
 ```
 
-## Modules
+## Responsibilities
 
-- `src/envs/`: HighwayEnv configuration, actions, and state discretisation.
-- `src/simulation/`: environment reset, step, metrics, and resource lifecycle.
-- `src/human/`: arrow-key capture and recorded episode lifecycle.
-- `src/data/`: JSONL schemas, validation, loading, and dashboard helpers.
-- `src/agents/sarsa.py`: the sole tabular on-policy learner.
-- `src/training/`: headless SARSA warm start, training, evaluation, and
-  checkpointing.
+| Area | Responsibility |
+|---|---|
+| `src/envs/` | HighwayEnv configuration, action validation, continuous-to-discrete state conversion. |
+| `src/simulation/` | Environment lifecycle, reset, step, state, and metrics facade. |
+| `src/human/` | Arrow-key capture and human episode lifecycle. |
+| `src/data/` | JSONL schemas, recorder, validator, demonstration loader, and summaries. |
+| `src/agents/sarsa.py` | The sole tabular SARSA policy and checkpoint persistence. |
+| `src/training/` | Warm start, training/evaluation episode orchestration. |
+| `scripts/` | Headless trainer and native PyGame entry points. |
+| `backend/` | Local-only API, subprocess ownership, live metric streaming, static frontend hosting. |
+| `frontend/` | No-build HTML, CSS, and JavaScript dashboard. |
 
-The native PyGame GUI remains responsible for driving and playback. FastAPI
-provides the local browser control surface for headless training, live metrics,
-and saved-run analytics; it does not render or control a PyGame window.
+## Local UI model
 
-## Training contract
+The browser is the control surface for demonstrations, playback, training,
+analytics, and project documentation. Human driving and policy playback still
+run in native PyGame windows because they require desktop keyboard input and
+rendering. The browser launches those fixed local scripts; it does not embed a
+simulator window.
 
-The environment exposes five discrete HighwayEnv meta-actions: left, idle,
-right, faster, and slower. SARSA receives a compact discrete state, chooses an
-epsilon-greedy action, and updates with the selected next action. Human episode
-trajectories preserve their subsequent action during warm start.
+## Evidence model
+
+Human demonstrations are stored in `data/human_demonstrations/`. Browser
+training requests receive a backend-generated ID and write under
+`artifacts/runs/<browser-run-id>/`. Each directory contains a timestamped JSONL
+history file and matching metadata file. The API also reads compatible older
+history directly under `artifacts/`.

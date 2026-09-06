@@ -1,19 +1,18 @@
-# Arena Self-Driving
+# Arena Self-Driving: SARSA Workbench
 
-Arrow-key highway driving demonstrations train one transparent, non-neural
-tabular SARSA policy. This is an educational simulation, not a real driving
-system.
+Arena Self-Driving is a local educational highway-driving project. Arrow-key
+demonstrations warm-start one transparent, non-neural tabular SARSA policy.
+It is not a real driving system.
 
-## Final design
+## What is included
 
-- **Controls:** Arrow Left/Right change lanes; Arrow Up accelerates; Arrow Down
-  slows; Space is idle. These are the only driving bindings.
-- **Native GUI:** PyGame owns driving, playback, pause, HUD, clickable speed
-  controls, traffic setup, and save/discard actions.
-- **Learning:** One tabular SARSA Q-table. There is no DQN, PyTorch, GPU, or
-  multi-agent comparison path.
-- **Control surface:** FastAPI serves a local browser frontend for training
-  controls, live metrics, and saved-run analytics. It binds to loopback only.
+- **One model:** `S` is the only model label and always means tabular SARSA.
+- **Human demonstrations:** a native PyGame window records arrow-key episodes.
+- **Agent playback:** a native PyGame window visualises the saved SARSA table.
+- **Training workbench:** FastAPI serves a local browser UI for controls, live
+  metrics, saved-run charts, documentation, and native-window launch buttons.
+- **Local-only server:** the workbench binds to `127.0.0.1`, not a network
+  interface.
 
 ## Install and run locally
 
@@ -44,6 +43,14 @@ HTML, CSS, and JavaScript files in `frontend/`.
 The human-driving and agent-play windows remain native PyGame applications;
 the browser can launch them locally but does not embed their desktop windows.
 
+## SARSA training data
+
+The environment has five actions: lane left, idle, lane right, faster, and
+slower. SARSA learns a Q-value for a discretised traffic state and action. Its
+live charts show total reward, survival steps, exploration epsilon, and average
+TD error. See [Algorithm Notes](docs/algorithm_notes.md) for the update rule
+and state representation.
+
 ## Evidence
 
 | Item | Location |
@@ -58,5 +65,15 @@ the browser can launch them locally but does not embed their desktop windows.
 browser-started run in its own folder, so the live websocket and saved-run
 browser can identify its history without accepting a client-provided path.
 
-See [Architecture](docs/architecture.md), [Commands](docs/commands.md), and
-[Timeline](docs/timeline.md) for the submission summary.
+## Documentation
+
+The workbench exposes all project docs under **Documentation**. They are also
+available directly:
+
+- [Architecture](docs/architecture.md)
+- [SARSA algorithm](docs/algorithm_notes.md)
+- [Commands and workflow](docs/commands.md)
+- [FastAPI control surface](docs/backend_notes.md)
+- [Security and data notes](docs/security_notes.md)
+- [UI design](docs/ui_design_system.md)
+- [Project status](docs/timeline.md)
