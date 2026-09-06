@@ -125,4 +125,5 @@ available directly:
 - [FastAPI control surface](docs/backend_notes.md)
 - [Security and data notes](docs/security_notes.md)
 - [UI design](docs/ui_design_system.md)
+- [Render deployment](docs/render_deployment.md)
 - [Project status](docs/timeline.md)

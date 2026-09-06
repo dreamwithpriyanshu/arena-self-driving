@@ -36,6 +36,7 @@ DOCUMENTS = {
     "backend": "backend_notes.md",
     "timeline": "timeline.md",
     "ui": "ui_design_system.md",
+    "render": "render_deployment.md",
 }
 
 
