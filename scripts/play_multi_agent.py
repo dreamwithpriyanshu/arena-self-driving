@@ -125,12 +125,33 @@ def main():
             # Extract observations for each agent
             obs_dqn = np.asarray(obs_tuple[0], dtype=np.float32)
             obs_sarsa = np.asarray(obs_tuple[1], dtype=np.float32)
-            
+
+            # HighwayEnv may return per-agent observations as 1-D ego-feature vectors
+            # (shape (F,)) instead of the full (V, F) kinematics matrix. Normalize
+            # both cases into a (V, F) matrix by padding absent neighbour rows with zeros.
+            def _ensure_2d_matrix(obs_arr: np.ndarray) -> np.ndarray:
+                obs_arr = np.asarray(obs_arr, dtype=np.float32)
+                if obs_arr.ndim == 2:
+                    return obs_arr
+                # obs_arr is 1-D: infer features and expected vehicles_count from env config
+                features = obs_arr.size
+                try:
+                    cfg = getattr(env.unwrapped, "config", {}) or {}
+                    vehicles_expected = int(cfg.get("observation", {}).get("vehicles_count", cfg.get("vehicles_count", 6)))
+                except Exception:
+                    vehicles_expected = 6
+                mat = np.zeros((vehicles_expected, features), dtype=np.float32)
+                mat[0, :features] = obs_arr
+                return mat
+
+            obs_dqn = _ensure_2d_matrix(obs_dqn)
+            obs_sarsa = _ensure_2d_matrix(obs_sarsa)
+
             state_dqn = build_raw_state(obs_dqn)
-            discrete_state_dqn = build_discrete_state(obs_dqn, lanes_count=env.unwrapped.config["lanes_count"])
+            discrete_state_dqn = build_discrete_state(obs_dqn, lanes_count=env.unwrapped.config.get("lanes_count", 4))
             
             state_sarsa = build_raw_state(obs_sarsa)
-            discrete_state_sarsa = build_discrete_state(obs_sarsa, lanes_count=env.unwrapped.config["lanes_count"])
+            discrete_state_sarsa = build_discrete_state(obs_sarsa, lanes_count=env.unwrapped.config.get("lanes_count", 4))
 
             # Get actions
             action_dqn = agent_dqn.act(state=state_dqn, discrete_state=discrete_state_dqn)
@@ -147,12 +168,16 @@ def main():
             if args.train:
                 next_obs_dqn = np.asarray(next_obs_tuple[0], dtype=np.float32)
                 next_obs_sarsa = np.asarray(next_obs_tuple[1], dtype=np.float32)
+
+                # Ensure 2-D format for next observations as well
+                next_obs_dqn = _ensure_2d_matrix(next_obs_dqn)
+                next_obs_sarsa = _ensure_2d_matrix(next_obs_sarsa)
                 
                 # DQN Update
                 t_dqn = Transition(
                     step=step, state=state_dqn.tolist(), action=action_dqn, reward=rewards[0],
                     next_state=build_raw_state(next_obs_dqn).tolist(), terminated=terminated_tuple[0], truncated=truncated_tuple[0],
-                    discrete_state=discrete_state_dqn, next_discrete_state=build_discrete_state(next_obs_dqn, lanes_count=env.unwrapped.config["lanes_count"]),
+                    discrete_state=discrete_state_dqn, next_discrete_state=build_discrete_state(next_obs_dqn, lanes_count=env.unwrapped.config.get("lanes_count", 4)),
                     lane=0, speed=0.0 # Multi-agent ignores these for training
                 )
                 m_dqn = agent_dqn.update(t_dqn)
