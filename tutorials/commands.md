@@ -76,7 +76,10 @@ Controls in the PyGame window:
 - Arrow Up: accelerate
 - Arrow Down: brake
 - Arrow Left / Right: lane change
-- ESC: quit and discard run
+- `H`: hide/show live telemetry
+- `S`: save the completed demonstration
+- `X`: discard the completed demonstration
+- `ESC`: discard/close the current run
 - ENTER (on instruction screen): start recording
 
 

@@ -92,6 +92,12 @@ python scripts/play_multi_agent.py --duration 300
 Add `--train --save` to a playback script to update and persist the agents
 during the native session.
 
+The native windows show live step, action, reward, lane, speed, and terminal
+status data. In multi-agent mode, R/DQN and S/SARSA are placed side-by-side in
+adjacent lanes. `SPACE` pauses, `H` toggles telemetry, `S` saves checkpoints,
+and `ESC` closes after a crash or timeout. Human mode uses arrow keys to drive,
+`S` to save, and `X` to discard a completed recording.
+
 ### Open the data dashboard
 
 ```powershell

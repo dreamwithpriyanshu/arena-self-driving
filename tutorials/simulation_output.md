@@ -47,6 +47,8 @@ Optional side-by-side reference:
 - A duration limit ends the episode without a collision.
 - `--train` means the agent continues updating while it drives.
 - `--save` writes the updated checkpoint after the native session.
+- Both native modes keep the window open after a crash or timeout. Use the
+  visible GUI controls to save, discard, restart where supported, or close.
 - If a checkpoint is missing, the viewer reports it and the agent may act
   randomly; this is expected for a new checkout.
 

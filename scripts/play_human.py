@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pygame
 from src.human.episode_manager import EpisodeManager
+from src.envs.actions import action_name
 
 
 def show_instructions(vehicle: str) -> bool:
@@ -88,18 +89,61 @@ def main():
     }
 
     mgr = EpisodeManager(render_mode="human", max_steps=args.duration)
-    mgr.start(vehicle=vehicle, config_overrides=config_overrides)
+    result = mgr.start(vehicle=vehicle, config_overrides=config_overrides)
     clock = pygame.time.Clock()
+    hud_font = pygame.font.SysFont("consolas", 16)
+    hud_small = pygame.font.SysFont("consolas", 13)
+    show_hud = True
+
+    def draw_hud(current_result, status="DRIVING"):
+        if not show_hud:
+            return
+        surface = pygame.display.get_surface()
+        if surface is None:
+            return
+        width, height = surface.get_size()
+        panel_height = 104
+        panel = pygame.Surface((width, panel_height), pygame.SRCALPHA)
+        panel.fill((22, 22, 28, 228))
+        surface.blit(panel, (0, height - panel_height))
+        surface.blit(
+            hud_font.render(f"HUMAN {vehicle} LIVE DATA  |  {status}", True, (0, 229, 255)),
+            (12, height - 96),
+        )
+        action = current_result.action_taken if current_result.action_taken is not None else 1
+        line = (
+            f"step={mgr.step_count:03d}  action={action_name(int(action)):<11} "
+            f"reward={mgr.total_reward:>7.2f}  lane={current_result.lane_index}  "
+            f"speed={current_result.speed:>5.1f} m/s ({current_result.speed * 3.6:>5.1f} km/h)"
+        )
+        surface.blit(hud_small.render(line, True, (235, 235, 235)), (12, height - 72))
+        surface.blit(
+            hud_small.render("ARROWS drive   H HUD   S save   X discard   ESC close", True, (210, 210, 215)),
+            (12, height - 51),
+        )
 
     try:
         while not mgr.is_done:
-            pygame.event.pump()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    mgr.discard()
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_h:
+                        show_hud = not show_hud
+                    elif event.key == pygame.K_s:
+                        path = mgr.save()
+                        print(f"Saved demonstration from GUI control: {path}")
+                        return
+                    elif event.key == pygame.K_x:
+                        mgr.discard()
+                        print("Episode discarded from GUI control.")
+                        return
             keys = pygame.key.get_pressed()
 
             if keys[pygame.K_ESCAPE]:
-                print("ESC pressed. Discarding episode...")
                 mgr.discard()
-                pygame.quit()
+                print("ESC pressed. Episode discarded.")
                 return
 
             action_key = " "
@@ -112,11 +156,31 @@ def main():
             elif keys[pygame.K_DOWN]:
                 action_key = "arrowdown"
 
-            mgr.act(action_key)
-            clock.tick(5)  # Cap at 5 decisions/sec — smooth but readable
+            result = mgr.act(action_key)
+            draw_hud(result)
+            pygame.display.flip()
+            clock.tick(10)
 
-        print("\nEpisode finished!")
-        path = mgr.save()
+        print("\nEpisode finished. Use the GUI to save or discard it.")
+        while mgr.is_active:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+                ):
+                    mgr.discard()
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_h:
+                        show_hud = not show_hud
+                    elif event.key == pygame.K_s:
+                        path = mgr.save()
+                        print(f"Saved demonstration from GUI control: {path}")
+                    elif event.key == pygame.K_x:
+                        mgr.discard()
+                        print("Episode discarded from GUI control.")
+            draw_hud(result, "COMPLETE — S SAVE / X DISCARD")
+            pygame.display.flip()
+            clock.tick(30)
         print(f"✅ Successfully saved demonstration to: {path}")
 
     except KeyboardInterrupt:

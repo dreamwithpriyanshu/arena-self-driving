@@ -47,6 +47,35 @@ def _vehicle_reward(env, vehicle, action: int) -> float:
     return float(value * rewards["on_road_reward"])
 
 
+def _prepare_visible_agents(env) -> None:
+    """Place R and S beside each other so both remain in the camera view."""
+    road = env.unwrapped.road
+    vehicles = list(getattr(env.unwrapped, "controlled_vehicles", []))
+    if len(vehicles) < 2:
+        return
+
+    from_node, to_node = next(iter(road.network.graph.keys())), None
+    to_node = next(iter(road.network.graph[from_node].keys()))
+    lane_count = int(env.unwrapped.config.get("lanes_count", 4))
+    anchor_lane = road.network.get_lane((from_node, to_node, 1))
+    anchor_x = anchor_lane.local_coordinates(vehicles[0].position)[0]
+    anchor_x = float(np.clip(anchor_x, 60.0, max(60.0, anchor_lane.length - 60.0)))
+
+    for index, (vehicle, colour) in enumerate(
+        zip(vehicles[:2], ((0, 229, 255), (255, 145, 0)))
+    ):
+        lane_id = min(index + 1, lane_count - 1)
+        lane_index = (from_node, to_node, lane_id)
+        lane = road.network.get_lane(lane_index)
+        vehicle.position = lane.position(anchor_x, 0)
+        vehicle.heading = lane.heading_at(anchor_x)
+        vehicle.speed = 22.0
+        vehicle.target_speed = 22.0
+        vehicle.target_lane_index = lane_index
+        vehicle.color = colour
+        vehicle.on_state_update()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Multi-Agent Evaluation & Live Training Interface")
     parser.add_argument("--vehicles-count", type=int, default=20, help="Number of NPC vehicles on the road")
@@ -148,6 +177,9 @@ def main():
 
     env = create_highway_env(render_mode="human", config_overrides=config_overrides)
     obs_tuple, info = env.reset()
+    _prepare_visible_agents(env)
+    # Re-read observations after repositioning the controlled vehicles.
+    obs_tuple = env.unwrapped.observation_type.observe()
     
     clock = pygame.time.Clock()
     step_count = 0
@@ -338,7 +370,7 @@ def main():
             pygame.display.flip()
             clock.tick(60)
 
-            # If either agent crashes, they both stop
+            # If either agent crashes, stop stepping and show the result HUD.
             if any(terminated_tuple) or any(truncated_tuple) or step >= args.duration - 1:
                 break
 
@@ -350,6 +382,36 @@ def main():
         if args.train:
             print(f"DQN Updates: {update_count[0]} | Avg Loss: {(total_loss[0]/max(1, update_count[0])):.4f}")
             print(f"SARSA Updates: {update_count[1]} | Avg TD: {(total_loss[1]/max(1, update_count[1])):.4f}")
+
+        # Keep the native window open after a crash/timeout. The user decides
+        # when to close it or save the updated checkpoints.
+        finished = True
+        while finished:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+                ):
+                    finished = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                    agent_dqn.save(checkpoint_dir)
+                    agent_sarsa.save(checkpoint_dir)
+                    print("Checkpoints saved from GUI control.")
+            draw_hud(
+                (action_dqn, action_sarsa),
+                getattr(env.unwrapped, "controlled_vehicles", []),
+                terminated_tuple,
+                truncated_tuple,
+            )
+            surface = pygame.display.get_surface()
+            if surface is not None:
+                message = hud_font.render(
+                    "EPISODE COMPLETE — S saves checkpoints   ESC closes",
+                    True,
+                    (255, 255, 255),
+                )
+                surface.blit(message, (12, 8))
+                pygame.display.flip()
+            clock.tick(30)
 
     except KeyboardInterrupt:
         print("\nStopped by user.")
