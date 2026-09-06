@@ -196,16 +196,6 @@ def test_multi_agent_stepping() -> None:
     print("  [OK] Tuple action reached HighwayEnv with two controlled vehicles")
 
 
-
-def test_state_builder_edge_cases() -> None:
-    """Test state builder with edge-case observations."""
-    _header("Test 5: State builder edge cases")
-
-    # All-zero observation (no neighbours visible)
-    obs_empty = np.zeros((6, 6), dtype=np.float32)
-    raw = build_raw_state(obs_empty)
-
-
 def test_state_builder_edge_cases() -> None:
     """Test state builder with edge-case observations."""
     _header("Test 5: State builder edge cases")
