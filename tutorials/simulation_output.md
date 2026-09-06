@@ -26,6 +26,15 @@ until the duration, collision, or window close ends the episode.
 controlled vehicles. This is the visual comparison mode; the Performance
 Analytics page is the historical comparison mode.
 
+The multi-agent window includes a live telemetry HUD with step progress,
+current action, cumulative reward, lane, speed, crash/timeout state, and
+training status for R and S. Its controls are:
+
+- `SPACE` — pause or resume the episode
+- `H` — hide or show the telemetry HUD
+- `S` — save both checkpoints immediately
+- `ESC` — stop the session
+
 ![Native PyGame agent playback](screenshots/native_agent_playback.png)
 
 Optional side-by-side reference:

@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 
+from src.envs.highway_factory import create_highway_env
 from src.envs.actions import (
     NUM_ACTIONS,
     Action,
@@ -155,6 +156,44 @@ def test_stepping() -> None:
 
     mgr.close()
     print("  [OK] Environment closed cleanly")
+
+
+def test_multi_agent_stepping() -> None:
+    """Verify the native multi-agent action/observation contract."""
+    _header("Test 4: Multi-agent tuple actions")
+
+    env = create_highway_env(
+        render_mode="rgb_array",
+        config_overrides={
+            "controlled_vehicles": 2,
+            "observation": {
+                "type": "MultiAgentObservation",
+                "observation_config": {
+                    "type": "Kinematics",
+                    "vehicles_count": 6,
+                    "features": ["x", "y", "vx", "vy", "cos_h", "sin_h"],
+                    "absolute": False,
+                    "normalize": True,
+                },
+            },
+            "action": {
+                "type": "MultiAgentAction",
+                "action_config": {"type": "DiscreteMetaAction"},
+            },
+        },
+    )
+    try:
+        observations, _info = env.reset(seed=7)
+        assert len(observations) == 2
+        next_observations, reward, terminated, truncated, _info = env.step((1, 1))
+        assert len(next_observations) == 2
+        assert np.isscalar(reward)
+        assert isinstance(terminated, (bool, np.bool_))
+        assert isinstance(truncated, (bool, np.bool_))
+    finally:
+        env.close()
+
+    print("  [OK] Tuple action reached HighwayEnv with two controlled vehicles")
 
 
 

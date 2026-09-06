@@ -98,6 +98,7 @@ def _build_gym_config(cfg: dict[str, Any]) -> dict[str, Any]:
     gym_cfg["lanes_count"] = cfg.get("lanes_count", 4)
     gym_cfg["vehicles_count"] = cfg.get("vehicles_count", 15)
     gym_cfg["vehicles_density"] = cfg.get("vehicles_density", 1.0)
+    gym_cfg["controlled_vehicles"] = cfg.get("controlled_vehicles", 1)
     if cfg.get("initial_lane_id") is not None:
         gym_cfg["initial_lane_id"] = cfg["initial_lane_id"]
 
@@ -110,12 +111,16 @@ def _build_gym_config(cfg: dict[str, Any]) -> dict[str, Any]:
         "absolute": obs.get("absolute", False),
         "normalize": obs.get("normalize", True),
     }
+    if "observation_config" in obs:
+        gym_cfg["observation"]["observation_config"] = obs["observation_config"]
 
     # Action
     act = cfg.get("action", {})
     gym_cfg["action"] = {
         "type": act.get("type", "DiscreteMetaAction"),
     }
+    if "action_config" in act:
+        gym_cfg["action"]["action_config"] = act["action_config"]
 
     # Reward
     rew = cfg.get("reward", {})

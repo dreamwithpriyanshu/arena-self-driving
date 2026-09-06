@@ -15,7 +15,36 @@ from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
 from src.envs.highway_factory import create_highway_env
 from src.envs.state_builder import build_raw_state, build_discrete_state
+from src.envs.actions import action_name
 from src.data.schemas import Transition
+
+
+def _vehicle_reward(env, vehicle, action: int) -> float:
+    """Calculate the HighwayEnv reward terms for one controlled vehicle."""
+    cfg = env.unwrapped.config
+    neighbours = env.unwrapped.road.network.all_side_lanes(vehicle.lane_index)
+    lane = (
+        vehicle.target_lane_index[2]
+        if hasattr(vehicle, "target_lane_index")
+        else vehicle.lane_index[2]
+    )
+    speed_min, speed_max = cfg.get("reward_speed_range", [20, 30])
+    forward_speed = float(vehicle.speed * np.cos(vehicle.heading))
+    speed_fraction = float(np.clip((forward_speed - speed_min) / max(speed_max - speed_min, 1e-6), 0, 1))
+    rewards = {
+        "collision_reward": float(vehicle.crashed),
+        "right_lane_reward": lane / max(len(neighbours) - 1, 1),
+        "high_speed_reward": speed_fraction,
+        "on_road_reward": float(vehicle.on_road),
+    }
+    value = sum(cfg.get(name, 0) * term for name, term in rewards.items())
+    if cfg.get("normalize_reward", True):
+        value = (value - cfg.get("collision_reward", -1.0)) / max(
+            cfg.get("high_speed_reward", 0.4) + cfg.get("right_lane_reward", 0.1)
+            - cfg.get("collision_reward", -1.0),
+            1e-6,
+        )
+    return float(value * rewards["on_road_reward"])
 
 
 def main():
@@ -101,6 +130,20 @@ def main():
         "duration": args.duration,
         "vehicles_density": args.vehicles_density,
         "controlled_vehicles": 2, # Two controlled agents!
+        "observation": {
+            "type": "MultiAgentObservation",
+            "observation_config": {
+                "type": "Kinematics",
+                "vehicles_count": 6,
+                "features": ["x", "y", "vx", "vy", "cos_h", "sin_h"],
+                "absolute": False,
+                "normalize": True,
+            },
+        },
+        "action": {
+            "type": "MultiAgentAction",
+            "action_config": {"type": "DiscreteMetaAction"},
+        },
     }
 
     env = create_highway_env(render_mode="human", config_overrides=config_overrides)
@@ -113,14 +156,78 @@ def main():
     update_count = [0, 0]
     total_loss = [0.0, 0.0]
 
+    # The HighwayEnv road is 600x300 by default. The HUD is drawn over the
+    # native PyGame surface after each environment step.
+    hud_font = pygame.font.SysFont("consolas", 16)
+    hud_small = pygame.font.SysFont("consolas", 13)
+    paused = False
+    show_hud = True
+
+    def draw_hud(actions, vehicles, terminated, truncated):
+        """Draw live controls and per-agent telemetry on the native window."""
+        if not show_hud:
+            return
+        surface = pygame.display.get_surface()
+        if surface is None:
+            return
+        width, height = surface.get_size()
+        panel_height = 112
+        panel = pygame.Surface((width, panel_height), pygame.SRCALPHA)
+        panel.fill((22, 22, 28, 228))
+        surface.blit(panel, (0, height - panel_height))
+
+        title = "MULTI-AGENT LIVE DATA"
+        if paused:
+            title += "  |  PAUSED"
+        surface.blit(hud_font.render(title, True, (0, 229, 255)), (12, height - 105))
+        surface.blit(
+            hud_small.render(
+                "SPACE pause/resume   H HUD   S save checkpoints   ESC quit",
+                True,
+                (210, 210, 215),
+            ),
+            (12, height - 84),
+        )
+        rows = []
+        for index, (label, colour) in enumerate((("R / DQN", (0, 229, 255)), ("S / SARSA", (255, 145, 0)))):
+            vehicle = vehicles[index] if index < len(vehicles) else None
+            lane = "-"
+            speed = "-"
+            crashed = bool(terminated[index]) if index < len(terminated) else False
+            if vehicle is not None:
+                lane_index = getattr(vehicle, "lane_index", "-")
+                lane = lane_index[-1] if isinstance(lane_index, (tuple, list)) else lane_index
+                speed = f"{float(getattr(vehicle, 'speed', 0.0)):.1f}"
+            status = "CRASHED" if crashed else ("TIMEOUT" if truncated[index] else "RUNNING")
+            rows.append(
+                f"{label:<9} action={action_name(int(actions[index])):<11} "
+                f"reward={total_reward[index]:>7.2f} lane={lane} speed={speed:>5} m/s {status}"
+            )
+            surface.blit(hud_small.render(rows[-1], True, colour), (12, height - 62 + index * 18))
+
     try:
         for step in range(args.duration):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     raise KeyboardInterrupt
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        paused = not paused
+                    elif event.key == pygame.K_h:
+                        show_hud = not show_hud
+                    elif event.key == pygame.K_s:
+                        agent_dqn.save(checkpoint_dir)
+                        agent_sarsa.save(checkpoint_dir)
+                        print("Checkpoints saved from GUI control.")
             keys = pygame.key.get_pressed()
             if keys[pygame.K_ESCAPE]:
                 raise KeyboardInterrupt
+
+            if paused:
+                draw_hud((0, 0), getattr(env.unwrapped, "controlled_vehicles", []), (False, False), (False, False))
+                pygame.display.flip()
+                clock.tick(30)
+                continue
 
             # Extract observations for each agent
             obs_dqn = np.asarray(obs_tuple[0], dtype=np.float32)
@@ -168,8 +275,26 @@ def main():
             action_dqn = agent_dqn.act(state=state_dqn, discrete_state=discrete_state_dqn)
             action_sarsa = agent_sarsa.act(state=state_sarsa, discrete_state=discrete_state_sarsa)
 
-            # Step environment (expects tuple of actions)
-            next_obs_tuple, rewards, terminated_tuple, truncated_tuple, info = env.step((action_dqn, action_sarsa))
+            # MultiAgentAction accepts one action per controlled vehicle.
+            next_obs_tuple, rewards, terminated, truncated, info = env.step((action_dqn, action_sarsa))
+
+            # HighwayEnv's HighwayEnv reward/termination contract is scalar,
+            # even with two controlled vehicles. Derive per-vehicle status and
+            # rewards from each controlled vehicle for accurate live telemetry.
+            controlled = getattr(env.unwrapped, "controlled_vehicles", [])
+            terminated_tuple = tuple(
+                bool(getattr(vehicle, "crashed", False)) for vehicle in controlled[:2]
+            )
+            terminated_tuple = terminated_tuple or (bool(terminated), bool(terminated))
+            if len(terminated_tuple) < 2:
+                terminated_tuple = tuple(terminated_tuple) + (bool(terminated),) * (2 - len(terminated_tuple))
+            truncated_tuple = (bool(truncated), bool(truncated))
+            rewards = tuple(
+                _vehicle_reward(env, vehicle, action)
+                for vehicle, action in zip(controlled[:2], (action_dqn, action_sarsa))
+            )
+            if len(rewards) < 2:
+                rewards = rewards + (float(rewards[0]) if rewards else float(0.0),) * (2 - len(rewards))
             
             total_reward[0] += rewards[0]
             total_reward[1] += rewards[1]
@@ -209,6 +334,8 @@ def main():
                     total_loss[1] += m_sarsa["td_error"]
 
             obs_tuple = next_obs_tuple
+            draw_hud((action_dqn, action_sarsa), controlled, terminated_tuple, truncated_tuple)
+            pygame.display.flip()
             clock.tick(60)
 
             # If either agent crashes, they both stop

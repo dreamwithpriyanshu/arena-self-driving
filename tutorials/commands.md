@@ -142,6 +142,8 @@ python scripts/play_multi_agent.py --vehicles-count 30 --duration 300 --train --
 ```
 
 Notes & robustness:
+- The native window shows live R/S actions, cumulative rewards, lanes, speeds, and terminal status.
+- `SPACE` pauses/resumes, `H` toggles the HUD, `S` saves both checkpoints immediately, and `ESC` quits.
 - The multi-agent script accepts observations either as full kinematics matrices `(V, F)` or ego-only vectors `(F,)`. Ego-only observations are automatically expanded to `(V, F)` by padding neighbour rows with zeros.
 - If you prefer richer neighbour information rather than zero padding, the environment configuration may be adjusted to return the full Kinematics observation.
 
