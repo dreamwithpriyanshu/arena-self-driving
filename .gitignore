@@ -56,6 +56,10 @@ scratch/
 
 # Training artifacts and model weights (do not commit large binaries)
 artifacts/training_history.jsonl
+artifacts/training_history_*.jsonl
+artifacts/training_history_*.meta.json
 *.pt
+*.npy
+artifacts/test_agents/
 models/
 logs/

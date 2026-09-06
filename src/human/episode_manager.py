@@ -1,10 +1,8 @@
 """
 Episode manager — orchestrates a human-driven episode from start to finish.
 
-Ties together the environment (via the simulation facade), the keyboard
-controller, and the transition recorder.  The Streamlit Human Training
-page will call this manager's methods; it should never reach into envs
-or data directly.
+Ties together the environment, keyboard controller, and transition recorder
+for the native PyGame human-driving runner.
 
 Layer: human  (depends on simulation, data, envs.actions)
 """

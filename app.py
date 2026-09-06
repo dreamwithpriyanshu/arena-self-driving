@@ -1,155 +1,100 @@
-import streamlit as st
-from src.data.loader import get_dataset_summary
 from pathlib import Path
-import json
+
+import streamlit as st
+
+from src.data.dashboard import history_files, load_history, load_latest_history
+from src.data.loader import get_dataset_summary
+
 
 st.set_page_config(
-    page_title="Arena Self-Driving — Data Center",
-    page_icon="🏎️",
+    page_title="Arena Self-Driving — Overview",
+    page_icon="R",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Load training history (if available) into session state so the Streamlit
-# multipage dashboard (Performance Analytics) can visualize recent training runs.
-if "training_history" not in st.session_state:
-    # Find any per-run history files and pick the most recent by mtime.
-    history_dir = Path("artifacts")
-    candidate_files = sorted(history_dir.glob("training_history_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-    if not candidate_files:
-        # Fallback to the legacy single-file name for backwards compatibility
-        legacy = history_dir / "training_history.jsonl"
-        candidate_files = [legacy] if legacy.exists() else []
 
-    if candidate_files:
-        try:
-            # Default to the most recent run
-            selected = candidate_files[0]
-            with selected.open("r", encoding="utf-8") as fh:
-                lines = [line.strip() for line in fh if line.strip()]
-                st.session_state.training_history = [json.loads(l) for l in lines]
-            st.session_state._training_history_file = str(selected)
-        except Exception as e:
-            st.session_state.training_history = []
-            st.warning(f"Failed to load training history: {e}")
-    else:
-        st.session_state.training_history = []
-        st.session_state._training_history_file = ""
+def configure_history_sidebar() -> None:
+    """Expose the available training runs without starting any training."""
+    if "training_history" not in st.session_state:
+        records, selected_path = load_latest_history()
+        st.session_state.training_history = records
+        st.session_state._training_history_file = selected_path
 
-# Sidebar controls to choose/run history files
-st.sidebar.header("Training History")
-history_dir = Path("artifacts")
-files = sorted(history_dir.glob("training_history_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-legacy = history_dir / "training_history.jsonl"
-if legacy.exists() and legacy not in files:
-    files.append(legacy)
+    st.sidebar.header("Training evidence")
+    files = history_files()
+    if not files:
+        st.sidebar.info("No training history runs found in artifacts/.")
+        return
 
-file_names = [str(p) for p in files]
-selected_file = None
-if file_names:
-    selected = st.sidebar.selectbox("Select run file", file_names, index=0)
-
-    # Show run metadata if available
-    meta_path = Path(selected).with_suffix('.meta.json')
-    if meta_path.exists():
-        try:
-            meta = json.loads(meta_path.read_text(encoding='utf-8'))
-            st.sidebar.markdown("**Run metadata**")
-            st.sidebar.write(f"Run ID: {meta.get('run_id')}")
-            st.sidebar.write(f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(meta.get('created_at', 0)))}")
-            if 'args' in meta:
-                st.sidebar.markdown("**CLI args**")
-                st.sidebar.json(meta['args'])
-        except Exception as e:
-            st.sidebar.warning(f"Failed to read meta: {e}")
-
+    selected = st.sidebar.selectbox("History file", files, format_func=lambda path: path.name)
     if st.sidebar.button("Load selected run"):
         try:
-            with Path(selected).open("r", encoding="utf-8") as fh:
-                lines = [line.strip() for line in fh if line.strip()]
-                st.session_state.training_history = [json.loads(l) for l in lines]
+            st.session_state.training_history = load_history(selected)
             st.session_state._training_history_file = str(selected)
             st.sidebar.success("Loaded")
-        except Exception as e:
-            st.sidebar.error(f"Failed to load: {e}")
+        except (OSError, ValueError) as exc:
+            st.sidebar.error(f"Could not load run: {exc}")
 
-    # Quick action: open artifacts folder in OS file explorer (works on local machines)
-    if st.sidebar.button("Open artifacts folder"):
-        try:
-            import os
-            os.startfile(str(history_dir.resolve()))
-        except Exception as e:
-            st.sidebar.error(f"Failed to open folder: {e}")
-else:
-    st.sidebar.info("No training history runs found in artifacts/")
+    meta_path = selected.with_suffix(".meta.json")
+    if meta_path.exists():
+        st.sidebar.caption(f"Metadata: {meta_path.name}")
 
-st.title("Data Command Center")
 
-st.markdown("""
-Welcome to the Arena Self-Driving dashboard. 
+configure_history_sidebar()
 
-This interface is dedicated to **data viewing and performance analytics**. 
-To ensure maximum performance and 60FPS physics, all simulation and gameplay has been moved to native desktop windows.
-""")
+st.title("Arena Self-Driving")
+st.caption("Overview · shared human demonstrations · DQN versus SARSA")
+st.markdown(
+    """
+This is the evidence desk for the experiment. It reads demonstrations and
+training history from disk; driving, training, and agent playback happen in
+native PyGame or headless CLI sessions.
+"""
+)
 
-st.markdown("---")
+summary = get_dataset_summary()
+st.subheader("Current evidence")
+st.dataframe(
+    {
+        "Source": ["Human demonstrations", "Latest training history"],
+        "Records": [summary["num_episodes"], len(st.session_state.training_history)],
+        "Location": [
+            "data/human_demonstrations",
+            st.session_state.get("_training_history_file") or "No run loaded",
+        ],
+    },
+    hide_index=True,
+    use_container_width=True,
+)
 
-col1, col2 = st.columns([1, 1])
+st.subheader("Native workflow")
+left, right = st.columns(2)
+with left:
+    st.markdown("**Collect demonstrations**")
+    st.code(
+        "python scripts/play_human.py R\npython scripts/play_human.py S",
+        language="powershell",
+    )
+    st.caption("Arrow keys drive the selected vehicle. ENTER starts; ESC discards the current run.")
 
-with col1:
-    st.subheader("📊 Human Demonstrations Dataset")
-    summary = get_dataset_summary()
-    
-    st.metric("Total Collected Episodes", summary["num_episodes"])
-    st.metric("Total Transitions (Steps)", f"{summary['total_transitions']:,}")
-    
-    r_count = summary["vehicles"].get("R", 0)
-    s_count = summary["vehicles"].get("S", 0)
-    
-    st.markdown(f"""
-    **Breakdown by Agent:**
-    * **R (DQN)**: {r_count} episodes
-    * **S (SARSA)**: {s_count} episodes
-    """)
+with right:
+    st.markdown("**Train and watch agents**")
+    st.code(
+        "python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run\n"
+        "python scripts/play_multi_agent.py",
+        language="powershell",
+    )
+    st.caption("Use the native windows for gameplay; return here to inspect the resulting files.")
 
-with col2:
-    st.subheader("🎮 How to Collect Data (Native Play)")
-    st.markdown("""
-    To record new driving demonstrations, use the native PyGame interface from your terminal. 
-    This provides a lag-free 60FPS experience and automatically saves data to the dataset.
-
-    **For DQN (R):**
-    ```bash
-    python scripts/play_human.py R
-    ```
-
-    **For SARSA (S):**
-    ```bash
-    python scripts/play_human.py S
-    ```
-    """)
-
-    st.subheader("🤖 How to Watch AI (Native Play)")
-    st.markdown("""
-    To watch the trained agents drive autonomously:
-
-    ```bash
-    python scripts/play_agent.py R
-    # or
-    python scripts/play_agent.py S
-    ```
-    """)
-
-# Global CSS for the UI Design System
-st.markdown("""
+st.markdown(
+    """
 <style>
-    .stApp {
-        background-color: #1E1E24;
-        color: #E0E0E0;
-    }
-    [data-testid="stMetricValue"] {
-        font-family: monospace;
-        color: #00E5FF;
-    }
+    .stApp { background-color: #1E1E24; }
+    [data-testid="stSidebar"] { background-color: #282830; }
+    code, pre { font-family: "Cascadia Code", Consolas, monospace; }
+    h1, h2, h3 { letter-spacing: -0.02em; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)

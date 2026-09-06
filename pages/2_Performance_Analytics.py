@@ -1,93 +1,79 @@
-import streamlit as st
-import pandas as pd
 import altair as alt
+import pandas as pd
+import streamlit as st
 
-st.set_page_config(page_title="Performance Analytics", page_icon="📊", layout="wide")
+from src.data.dashboard import history_files, load_history
 
-st.title("Performance Analytics: DQN vs SARSA")
-st.markdown("Detailed breakdown of agent performance metrics and accuracy comparisons.")
 
-if "training_history" not in st.session_state or not st.session_state.training_history:
-    st.info("No data available. Go to **Model Training** to generate training history.")
+st.set_page_config(page_title="Performance Analytics", page_icon="A", layout="wide")
+st.title("Performance Analytics")
+st.caption("Training history written by the headless trainer; no simulation is run in Streamlit.")
+
+files = history_files()
+if not files:
+    st.info("No training history is available. Run the trainer first:")
+    st.code(
+        "python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run",
+        language="powershell",
+    )
     st.stop()
 
-df = pd.DataFrame(st.session_state.training_history)
+selected = st.selectbox("History file", files, format_func=lambda path: path.name)
+try:
+    df = pd.DataFrame(load_history(selected))
+except (OSError, ValueError) as exc:
+    st.error(f"Could not load {selected.name}: {exc}")
+    st.stop()
 
 if df.empty:
-    st.warning("No data to display.")
-else:
-    # ── Global Comparison ──────────────────────────────────────────────────
-    st.subheader("Accuracy & Survival Comparison")
-    col_c1, col_c2 = st.columns(2)
+    st.warning("The selected history file contains no records.")
+    st.stop()
 
-    base = alt.Chart(df).encode(
-        x=alt.X('episode_num:Q', title="Episode"),
-        color=alt.Color('vehicle:N', scale=alt.Scale(
-            domain=['R', 'S'], range=['#00E5FF', '#FF9100']
-        ), legend=alt.Legend(title="Algorithm (R=DQN, S=SARSA)"))
-    )
+missing = {"episode_num", "vehicle"} - set(df.columns)
+if missing:
+    st.error(f"History is missing required columns: {', '.join(sorted(missing))}")
+    st.stop()
 
-    with col_c1:
-        reward_chart = base.mark_line(point=True).encode(
-            y=alt.Y('total_reward:Q', title="Total Reward (Accuracy)")
-        ).properties(height=300)
-        st.altair_chart(reward_chart, use_container_width=True)
+df = df.sort_values(["vehicle", "episode_num"])
+st.write(f"Loaded `{selected.name}` · {len(df)} episode records")
 
-    with col_c2:
-        steps_chart = base.mark_line(point=True).encode(
-            y=alt.Y('steps:Q', title="Survival Steps")
-        ).properties(height=300)
-        st.altair_chart(steps_chart, use_container_width=True)
+COLORS = alt.Scale(domain=["R", "S"], range=["#00E5FF", "#FF9100"])
 
-    st.markdown("---")
 
-    # ── Algorithm Specific Metrics ──────────────────────────────────────────
-    col1, col2 = st.columns(2)
+def comparison_chart(field: str, title: str) -> alt.Chart | None:
+    if field not in df.columns:
+        return None
+    return alt.Chart(df).mark_line(point=True).encode(
+        x=alt.X("episode_num:Q", title="Episode"),
+        y=alt.Y(f"{field}:Q", title=title),
+        color=alt.Color("vehicle:N", scale=COLORS, title="Vehicle"),
+        tooltip=[
+            "vehicle:N",
+            "episode_num:Q",
+            alt.Tooltip(f"{field}:Q", title=title, format=".3f"),
+        ],
+    ).properties(height=280)
 
-    with col1:
-        st.subheader("DQN (R) Metrics")
-        df_r = df[df["vehicle"] == "R"]
-        if not df_r.empty:
-            # Loss chart
-            if "avg_loss" in df_r.columns:
-                loss_chart = alt.Chart(df_r).mark_line(color="#00E5FF").encode(
-                    x=alt.X('episode_num:Q', title="Episode"),
-                    y=alt.Y('avg_loss:Q', title="Average Loss")
-                ).properties(height=200)
-                st.altair_chart(loss_chart, use_container_width=True)
-                
-            # Epsilon decay
-            if "epsilon" in df_r.columns:
-                eps_chart = alt.Chart(df_r).mark_line(color="#00E5FF").encode(
-                    x=alt.X('episode_num:Q', title="Episode"),
-                    y=alt.Y('epsilon:Q', title="Exploration Rate (ε)")
-                ).properties(height=200)
-                st.altair_chart(eps_chart, use_container_width=True)
-        else:
-            st.write("No DQN data.")
 
-    with col2:
-        st.subheader("SARSA (S) Metrics")
-        df_s = df[df["vehicle"] == "S"]
-        if not df_s.empty:
-            # TD Error chart
-            if "avg_td_error" in df_s.columns:
-                td_chart = alt.Chart(df_s).mark_line(color="#FF9100").encode(
-                    x=alt.X('episode_num:Q', title="Episode"),
-                    y=alt.Y('avg_td_error:Q', title="Average TD Error")
-                ).properties(height=200)
-                st.altair_chart(td_chart, use_container_width=True)
-                
-            # Epsilon decay
-            if "epsilon" in df_s.columns:
-                eps_chart = alt.Chart(df_s).mark_line(color="#FF9100").encode(
-                    x=alt.X('episode_num:Q', title="Episode"),
-                    y=alt.Y('epsilon:Q', title="Exploration Rate (ε)")
-                ).properties(height=200)
-                st.altair_chart(eps_chart, use_container_width=True)
-        else:
-            st.write("No SARSA data.")
+left, right = st.columns(2)
+with left:
+    chart = comparison_chart("total_reward", "Total reward")
+    if chart is not None:
+        st.altair_chart(chart, use_container_width=True)
+with right:
+    chart = comparison_chart("steps", "Survival steps")
+    if chart is not None:
+        st.altair_chart(chart, use_container_width=True)
 
-    st.markdown("---")
-    st.subheader("Raw History Table")
-    st.dataframe(df, use_container_width=True)
+st.subheader("Learning signals")
+for field, title in [
+    ("avg_loss", "DQN average loss"),
+    ("avg_td_error", "SARSA average TD error"),
+    ("epsilon", "Exploration rate"),
+]:
+    chart = comparison_chart(field, title)
+    if chart is not None:
+        st.altair_chart(chart, use_container_width=True)
+
+st.subheader("Raw records")
+st.dataframe(df, hide_index=True, use_container_width=True)

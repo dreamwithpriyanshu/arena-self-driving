@@ -2,7 +2,9 @@
 
 This document covers the security boundaries and input validation rules implemented in **Build Step 2** (Human Recorder) and applied throughout the project.
 
-Because this project does not run a web server or handle user authentication, the threat model focuses on **local robustness** and **safe handling of user-generated data** (Streamlit inputs, uploaded/downloaded JSONL files).
+Because this project does not run a web server or handle user authentication,
+the threat model focuses on **local robustness** and safe handling of
+user-generated JSONL files produced by the native recorder.
 
 ---
 

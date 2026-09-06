@@ -1,198 +1,131 @@
 # Self-Driving Car Simulation MVP
 
-> **A comparative study of DQN vs SARSA for autonomous highway driving,
-> trained on shared human demonstrations.**
+> A comparative study of DQN versus SARSA for autonomous highway driving,
+> trained from shared human demonstrations.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)]()
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)]()
 [![HighwayEnv](https://img.shields.io/badge/sim-HighwayEnv-green.svg)]()
 
----
+## What is this?
 
-## 🚗 What is this?
+Vehicle R uses DQN, an off-policy neural-network Q-learner. Vehicle S uses
+tabular SARSA, an on-policy learner. Both receive the same human-driving data;
+the algorithm is the controlled difference.
 
-![Live Tracking](tutorials/screenshots/3_live_tracking.png)
+The project has two runtime surfaces:
 
-A simulation-based comparison of two reinforcement learning algorithms
-applied to self-driving on a highway:
+- **Native PyGame** handles human data collection, gameplay, agent playback,
+  and the side-by-side DQN/SARSA view.
+- **Streamlit** is a data and analytics dashboard. It does not run or render
+  the simulation.
 
-- **Vehicle R** — trained with **DQN** (Deep Q-Network), an off-policy
-  neural-network Q-learner using experience replay.
-- **Vehicle S** — trained with **SARSA** (State-Action-Reward-State-Action),
-  an on-policy tabular learner.
+## Project structure
 
-![Performance Analytics](tutorials/screenshots/4_performance_analytics.png)
-
-Both agents learn from **identical human demonstrations** collected in
-[HighwayEnv](https://github.com/Farama-Foundation/HighwayEnv).
-The algorithm is the only controlled variable.
-
----
-
-## 📁 Project structure
-
-```
+```text
 arena-self-driving/
-├── app.py                    # Streamlit entry point
-├── pages/                    # Streamlit multi-page UI
-│   ├── 1_Simulation.py
-│   ├── 2_Human_Training.py
-│   ├── 3_Live_Tracking.py
-│   ├── 4_Performance_Analytics.py
-│   ├── 5_Train_and_Compare.py
-│   └── 6_Docs.py
+├── app.py                         # Streamlit overview/dashboard entry point
+├── pages/
+│   ├── 1_Human_Demonstrations.py  # Dataset statistics and metadata
+│   ├── 2_Performance_Analytics.py # Training-history charts
+│   └── 3_Docs.py                  # Documentation viewer
 ├── src/
-│   ├── envs/                 # HighwayEnv factory, state builder, actions
-│   ├── agents/               # DQN (R) and SARSA (S) implementations
-│   ├── human/                # Keyboard control & episode recording
-│   ├── data/                 # Demo recording, validation, loading
-│   ├── training/             # Training orchestration
-│   ├── evaluation/           # Fixed-seed evaluation & metrics
-│   └── simulation/           # Façade for UI pages
-├── configs/                  # YAML configuration files
-├── assets/                   # Generated icons, sprites, textures
-├── data/
-│   ├── human_demonstrations/ # JSONL files from human driving
-│   └── autonomous_logs/      # JSONL files from agent evaluation
-├── artifacts/
-│   ├── checkpoints/          # Saved model weights
-│   └── reports/              # Evaluation reports
-├── tests/                    # pytest test suite
-├── scripts/                  # Utility & smoke-test scripts
-└── docs/                     # Project documentation
+│   ├── envs/                      # HighwayEnv, actions, state builders
+│   ├── agents/                    # DQN (R) and SARSA (S)
+│   ├── human/                     # Keyboard recording workflow
+│   ├── data/                      # Schemas, validation, loaders, dashboard data
+│   ├── training/                  # Headless training orchestration
+│   └── simulation/                # Shared environment lifecycle
+├── scripts/                       # Native PyGame and headless CLI entry points
+├── configs/                       # YAML environment defaults
+├── data/                          # Human demonstrations and autonomous logs
+├── artifacts/                     # Checkpoints and training history
+├── tests/                         # pytest suite
+├── docs/                          # Architecture and project notes
+└── tutorials/                     # Commands and operating guides
 ```
 
----
+## Setup
 
-## 🧠 Why it matters
+Prerequisites: Python 3.9–3.11 and pip.
 
-This is a college-level project designed to:
-1. Show how the same human-driving data can bootstrap two fundamentally different RL algorithms.
-2. Make the comparison **watchable** — a reviewer can open the app and see both cars driving live, not just read log files.
-3. Produce reproducible, transparent results with no manufactured numbers.
-
----
-
-## 🛠️ Setup
-
-### Prerequisites
-
-- Python **3.9 – 3.11**
-- pip
-
-### Installation
-
-```bash
-# Clone the repository
+```powershell
 git clone https://github.com/dreamwithpriyanshu/arena-self-driving.git
 cd arena-self-driving
-
-# Create a virtual environment
 python -m venv venv
-venv\Scripts\activate       # Windows
-# source venv/bin/activate  # Linux/macOS
-
-# Install dependencies
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Quick start
 
+### Collect human demonstrations
 
-## 🚀 Quick start
+Use the native PyGame window. ENTER starts; arrow keys drive; ESC discards the
+active episode.
 
-### Run the Streamlit Dashboard (Data & Analytics)
+```powershell
+python scripts/play_human.py R
+python scripts/play_human.py S --vehicles-count 20 --duration 150
+```
 
-Streamlit is used purely as a data command center. Use it to view collected datasets and side-by-side performance analytics of the trained models.
-```bash
+### Train the agents
+
+```powershell
+python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run
+```
+
+This writes checkpoints and a timestamped training-history JSONL file under
+`artifacts/`.
+
+### Watch agents natively
+
+```powershell
+python scripts/play_agent.py R
+python scripts/play_agent.py S
+python scripts/play_multi_agent.py --duration 300
+```
+
+Add `--train --save` to a playback script to update and persist the agents
+during the native session.
+
+### Open the data dashboard
+
+```powershell
 streamlit run app.py
 ```
 
-### Run Native PyGame Modes (Gameplay & AI Visualization)
+The dashboard contains Overview, Human Demonstrations, Performance Analytics,
+and Documentation pages. It reads files only; it does not start HighwayEnv.
 
-For a high-performance, real-time 60 FPS experience outside of Streamlit:
+### Run tests
 
-### Run the headless trainer (CLI)
-
-A headless CLI trainer runs episodes at maximum speed and writes per-run training history files that the Streamlit dashboard can visualize. Example:
-
-```bash
-python scripts/train.py --agent BOTH --episodes 100 --warm-start --batch-size 64 --history-mode per-run
-```
-
-See `tutorials/training_guide.md` for full details and advanced flags.
-
-
-**1. Drive Manually (Data Collection)**
-```bash
-# Drive vehicle R using your physical arrow keys to record a dataset
-python scripts/play_human.py R
-```
-
-**2. Watch Autonomous Agents (Live Evaluation)**
-```bash
-# Watch the trained DQN agent (R) or SARSA agent (S) drive autonomously
-python scripts/play_agent.py R
-```
-
-**3. Multi-Agent Mode (DQN vs SARSA)**
-```bash
-# Watch BOTH agents drive in the same highway concurrently!
-python scripts/play_multi_agent.py
-```
-
-> **Pro Tip:** All native scripts support CLI arguments to change the environment difficulty dynamically:
-> `python scripts/play_agent.py R --vehicles-count 30 --vehicles-density 1.5`
-
-### Run the full test suite
-
-```bash
+```powershell
 pytest tests/ -v
 ```
 
----
+## Evidence tracked by the project
 
-## 📊 Key metrics tracked
+| Evidence | Location | Produced by |
+|---|---|---|
+| Human demonstrations | `data/human_demonstrations/*.jsonl` | `play_human.py` |
+| Agent checkpoints | `artifacts/checkpoints/` | `train.py` / playback `--save` |
+| Training history | `artifacts/training_history_<run>.jsonl` | `train.py` |
+| Run metadata | `artifacts/training_history_<run>.meta.json` | `train.py` |
 
-| Metric | Description |
-|--------|------------|
-| Mean episode reward | Average cumulative reward per episode |
-| Collision rate | Fraction of episodes ending in a crash |
-| Survival time | Average steps before episode ends |
-| Average speed | Mean ego-vehicle speed |
-| Lane-change count | Number of lane changes per episode |
-| Action distribution | Frequency of each discrete action |
-| DQN loss | Training loss for the DQN network |
-| SARSA Q-value stats | Mean/max Q-values and update magnitudes |
+The dashboard reports whatever is actually present. It does not manufacture
+performance numbers or claim that a model is trained when its checkpoint is
+missing.
 
----
+## Documentation
 
-## 🏗️ Build phases
-
-| Step | Description | Status |
-|------|-------------|--------|
-| 1 | Environment, actions, state | ✅ Complete |
-| 2 | Human recorder | ✅ Complete |
-| 3 | R (DQN) + S (SARSA) agents | ✅ Complete |
-| 4 | Joint training + Streamlit UI | ✅ Complete |
-| 5 | QA + handoff | ✅ Complete |
-
-After all 5 build steps, a **7-day human training cycle** begins.
-
----
-
-## 📖 Documentation
-
-- [Architecture](docs/architecture.md) — layer diagram and dependency rules
-- [Training Manual](tutorials/training_guide.md) — guide to human-demonstration and agent training
-- [Simulation Output](tutorials/simulation_output.md) — how to interpret what you see in the PyGame window
-- [Algorithm Notes](docs/algorithm_notes.md) — DQN vs SARSA explained
-- [Security Notes](docs/security_notes.md) — file I/O and input validation
-
----
-
-## 📄 License
+- [Architecture](docs/architecture.md)
+- [Training Guide](tutorials/training_guide.md)
+- [Native Simulation Output](tutorials/simulation_output.md)
+- [Command Reference](tutorials/commands.md)
+- [Algorithm Notes](docs/algorithm_notes.md)
+- [UI Design System](docs/ui_design_system.md)
+- [Security Notes](docs/security_notes.md)
+- [7-Day Human Training Plan](docs/human_training_7_day_plan.md)
 
 This project is for educational purposes.
-
----
-

@@ -1,23 +1,37 @@
-# Understanding Simulation Output
+# Understanding Native Simulation Output
 
-The Self-Driving Car MVP uses a high-performance **Native PyGame** renderer to display the highway environment at a smooth 60FPS.
+The interactive simulation is a native PyGame window backed by HighwayEnv.
+Streamlit does not render or control this loop.
 
-## The PyGame View
+## Human driving
 
-### Visual Elements
-- **Green Car (Ego)**: Represents your controlled vehicle (Human, DQN, or SARSA).
-- **Blue/Gray Cars**: Background NPC traffic (obstacles).
-- **Lanes**: The highway consists of 4 lanes. The ego vehicle must learn to navigate around slower NPC traffic by changing lanes without colliding.
+`python scripts/play_human.py R` opens an instruction screen first. Press
+ENTER, then use the arrow keys to control the selected vehicle. The recorder
+shows the highway and traffic directly in the native window and saves the
+episode when it ends. Press ESC to discard an unsafe or incomplete run.
 
-### Live Telemetry (Terminal)
-While watching the PyGame window, check your terminal for real-time telemetry updates:
-- **Steps**: Number of actions taken so far.
-- **Reward**: Cumulative reward for the episode. Positive for moving forward, negative for collisions.
-- **Agent Action**: The discrete integer (0-4) chosen by the agent.
+## Agent playback
 
-## Interpreting Agent Behavior
-- **Exploration (Early Training)**: If you run with the `--train` flag early on, the agent will frequently change lanes randomly and likely crash. This is normal ($\epsilon$ is high).
-- **Exploitation (Late Training)**: When running normal evaluation, the agent will stick to a fast lane and only change lanes when an NPC is blocking its path.
-- **DQN vs SARSA**: You will notice DQN (R) is capable of smoother multi-lane planning, whereas SARSA (S) might exhibit slightly more rigid, bucketed state responses due to its discrete table representation.
+`python scripts/play_agent.py R` and `python scripts/play_agent.py S` open an
+instruction screen that identifies the algorithm and whether the run is greedy
+evaluation or exploratory training. The agent then acts every environment step
+until the duration, collision, or window close ends the episode.
 
-Check the **Performance Analytics** page in the Streamlit Dashboard (`streamlit run app.py`) to see the exact convergence curves!
+`python scripts/play_multi_agent.py` runs DQN and SARSA together using two
+controlled vehicles. This is the visual comparison mode; the Performance
+Analytics page is the historical comparison mode.
+
+## Reading the result
+
+- A collision ends the current episode and is reported in the terminal.
+- A duration limit ends the episode without a collision.
+- `--train` means the agent continues updating while it drives.
+- `--save` writes the updated checkpoint after the native session.
+- If a checkpoint is missing, the viewer reports it and the agent may act
+  randomly; this is expected for a new checkout.
+
+The dashboard reads the resulting training history with:
+
+```powershell
+streamlit run app.py
+```

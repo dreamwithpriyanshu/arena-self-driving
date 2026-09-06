@@ -6,7 +6,7 @@ from the ``src`` package.  It wraps the ``envs`` layer and exposes a
 simple interface for resetting, stepping, reading state, and closing
 the environment.
 
-Layer: simulation  (sits between training/envs and UI)
+Layer: simulation (shared by native playback, human recording, and training)
 """
 
 from __future__ import annotations
@@ -292,4 +292,3 @@ class EnvManager:
         except (TypeError, ValueError, AttributeError):
             pass
         return 0.0
-

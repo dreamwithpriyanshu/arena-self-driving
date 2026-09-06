@@ -1,20 +1,5 @@
-"""
-src.simulation — Simulation Facade.
-
-The sole entry point for Streamlit pages to interact with the environment,
-training loops, human recording, and data.
-
-Uses lazy imports to avoid circular dependency with src.training.
-"""
+"""Environment lifecycle helpers shared by native runtimes and training."""
 
 from src.simulation.env_manager import EnvManager
-
-def __getattr__(name):
-    """Lazy import TrainingFacade to break circular dependency."""
-    if name == "TrainingFacade":
-        from src.simulation.training_facade import TrainingFacade
-        return TrainingFacade
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 
 __all__ = ["EnvManager"]

@@ -161,7 +161,7 @@ class TrainingOrchestrator:
                 if "avg_q" in metrics:
                     episode_q_val += metrics["avg_q"]
 
-            # Callback for Live Tracking UI
+            # Callback for optional CLI progress reporting.
             if step_callback:
                 step_callback(result, metrics)
 

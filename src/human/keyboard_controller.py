@@ -2,7 +2,7 @@
 Keyboard controller — maps user key presses to environment actions.
 
 This module defines the mapping logic only.  The actual key capture
-happens in the Streamlit Human Training page (Build Step 4).
+happens in the native PyGame runner.
 
 Layer: human  (depends on envs.actions; knows nothing about data/training/UI)
 """

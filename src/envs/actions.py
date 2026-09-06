@@ -40,7 +40,7 @@ ACTION_INDEX: dict[str, int] = {a.name: a.value for a in Action}
 """Maps action name → index, e.g. {'LANE_LEFT': 0, …}."""
 
 # Keyboard mapping — used by the human recorder (Build Step 2).
-# Keys are lowercase key names from the browser keyboard event.
+# Keys are lowercase key names from the native PyGame event loop.
 KEYBOARD_ACTION_MAP: dict[str, int] = {
     # Arrow keys
     "arrowleft": Action.LANE_LEFT,
