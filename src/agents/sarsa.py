@@ -5,7 +5,7 @@ Implementation of tabular SARSA using numpy. Uses a discretised state
 index and maintains a Q-table. Features an epsilon-greedy policy and
 on-policy updates.
 
-Layer: agents (depends on envs, data.schemas; isolated from DQN)
+Layer: agents (depends on envs and data schemas)
 """
 
 from __future__ import annotations

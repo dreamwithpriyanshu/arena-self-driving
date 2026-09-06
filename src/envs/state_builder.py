@@ -1,11 +1,10 @@
 """
 State builder — transforms raw HighwayEnv observations into the
-representations consumed by DQN (continuous vector) and SARSA
-(discrete state index).
+representations consumed by the tabular SARSA policy.
 
-Both agents receive observations from the *same* environment step.
-This module converts that observation into two parallel forms so the
-comparison is fair: only the *algorithm* differs, not the information.
+Provides a continuous flat vector (retained for recorded data) and a
+discrete state index (used by the Q-table).  Both are derived from
+the same environment step observation.
 
 Layer: envs  (knows nothing about agents, training, or Streamlit)
 """
@@ -42,7 +41,7 @@ def _load_sarsa_bins(config_path: Optional[str | Path] = None) -> dict[str, list
 
 
 # ---------------------------------------------------------------------------
-# Raw state for DQN  (continuous flat vector)
+# Raw recorded state (continuous flat vector)
 # ---------------------------------------------------------------------------
 
 def _default_vehicles_count() -> int:
@@ -96,7 +95,7 @@ def build_raw_state(obs: np.ndarray) -> np.ndarray:
 
 
 def raw_state_dim(vehicles_count: int = 6, features_count: int = 6) -> int:
-    """Return the expected dimensionality of the raw (DQN) state vector."""
+    """Return the expected dimensionality of the raw recorded state vector."""
     return vehicles_count * features_count
 
 

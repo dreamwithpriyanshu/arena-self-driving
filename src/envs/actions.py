@@ -1,8 +1,8 @@
 """
 Shared action definitions for the Self-Driving Car Simulation.
 
-Both agents (R — DQN, S — SARSA) use the same discrete action set
-derived from HighwayEnv's DiscreteMetaAction space.
+The tabular SARSA policy uses this discrete action set derived from
+HighwayEnv's DiscreteMetaAction space.
 
 This module is the single source of truth for action indices, names,
 and validation.  It knows nothing about agents, training, or Streamlit.
@@ -47,11 +47,6 @@ KEYBOARD_ACTION_MAP: dict[str, int] = {
     "arrowright": Action.LANE_RIGHT,
     "arrowup": Action.FASTER,
     "arrowdown": Action.SLOWER,
-    # WASD
-    "a": Action.LANE_LEFT,
-    "d": Action.LANE_RIGHT,
-    "w": Action.FASTER,
-    "s": Action.SLOWER,
     # Spacebar → idle / emergency brake
     " ": Action.IDLE,
     "spacebar": Action.IDLE,

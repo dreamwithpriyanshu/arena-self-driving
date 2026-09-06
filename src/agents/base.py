@@ -1,9 +1,7 @@
 """
 Base agent interface.
 
-Defines the common API that both DQN (R) and SARSA (S) agents must implement.
-This ensures the training and UI layers can interact with either agent
-without knowing their internal mechanics.
+Defines the interface used by the tabular SARSA policy.
 
 Layer: agents (depends on envs.actions and data.schemas)
 """
@@ -30,7 +28,7 @@ class BaseAgent(abc.ABC):
         Parameters
         ----------
         state : Any
-            The continuous state representation (used by DQN).
+            The continuous state representation retained in recorded data.
         discrete_state : int
             The discrete state index (used by SARSA).
 

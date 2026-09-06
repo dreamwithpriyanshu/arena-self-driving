@@ -20,14 +20,14 @@ class Transition:
     """
     A single (s, a, r, s', done) transition recorded during driving.
 
-    This is the atomic unit of training data for both DQN and SARSA.
+    This is the atomic unit of recorded driving and SARSA training data.
     """
 
     step: int
     """Step index within the episode (0-based)."""
 
     state: list[float]
-    """Flat continuous state vector (for DQN).  Length = V * F."""
+    """Flat continuous state vector retained for replay and inspection."""
 
     action: int
     """Discrete action index (0–4)."""
@@ -88,8 +88,8 @@ class EpisodeMetadata:
     episode_id: str
     """Unique identifier (e.g., ``'ep_20260906_012345_001'``)."""
 
-    vehicle: str = "R"
-    """Which vehicle was being driven: ``'R'`` (DQN) or ``'S'`` (SARSA)."""
+    vehicle: str = "S"
+    """The SARSA driving label (``'S'`` for data compatibility)."""
 
     source: str = "human"
     """Data source: ``'human'`` or ``'autonomous'``."""

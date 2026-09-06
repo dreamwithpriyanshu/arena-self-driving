@@ -62,7 +62,7 @@ class EpisodeManager:
         self._prev_result: Optional[StepResult] = None
         self._episode_active: bool = False
         self._episode_done: bool = False
-        self._vehicle: str = "R"
+        self._vehicle: str = "S"
 
     # ------------------------------------------------------------------
     # Episode lifecycle
@@ -70,7 +70,7 @@ class EpisodeManager:
 
     def start(
         self,
-        vehicle: str = "R",
+        vehicle: str = "S",
         seed: Optional[int] = None,
         config_overrides: Optional[dict[str, Any]] = None,
     ) -> StepResult:
@@ -80,7 +80,7 @@ class EpisodeManager:
         Parameters
         ----------
         vehicle : str
-            ``'R'`` (DQN) or ``'S'`` (SARSA).
+            ``'S'`` — the SARSA driving label.
         seed : int, optional
             Environment random seed.
         config_overrides : dict, optional
@@ -97,8 +97,8 @@ class EpisodeManager:
                 "Call save() or discard() first."
             )
 
-        if vehicle not in ("R", "S"):
-            raise ValueError(f"vehicle must be 'R' or 'S', got {vehicle!r}")
+        if vehicle != "S":
+            raise ValueError(f"vehicle must be 'S', got {vehicle!r}")
 
         self._vehicle = vehicle
 

@@ -40,7 +40,7 @@ class StepResult:
     """Raw Kinematics matrix (V, F) straight from the env."""
 
     raw_state: np.ndarray
-    """Flattened continuous state vector for DQN."""
+    """Flattened continuous state vector retained for recorded transitions."""
 
     discrete_state: int
     """Integer state index for tabular SARSA."""

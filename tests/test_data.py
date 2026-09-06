@@ -76,7 +76,7 @@ def test_episode_manager_and_recorder() -> None:
     mgr = EpisodeManager(base_dir=test_dir, render_mode="rgb_array")
     
     # Start episode
-    mgr.start(vehicle="R", seed=42)
+    mgr.start(vehicle="S", seed=42)
     assert mgr.is_active
     print("  [OK] Episode started")
     
@@ -111,7 +111,7 @@ def test_validator_and_loader() -> None:
     
     # Loading
     meta, transitions = load_episode(filepath, validate=True)
-    assert meta.vehicle == "R"
+    assert meta.vehicle == "S"
     assert len(transitions) == 3
     assert transitions[0].action == Action.FASTER
     print("  [OK] Episode loaded successfully")

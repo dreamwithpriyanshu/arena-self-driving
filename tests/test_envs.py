@@ -6,7 +6,7 @@ Verifies:
 1. Environment creation from YAML config
 2. Reset produces a valid observation
 3. 10 random steps work without errors
-4. Raw state (DQN) has correct shape
+4. Raw recorded state has correct shape
 5. Discrete state (SARSA) is within expected range
 6. Action validation works
 7. Environment closes cleanly

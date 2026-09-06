@@ -5,8 +5,8 @@ Smoke test for Build Step 4a — Training Orchestration.
 Verifies:
 1. Orchestrator initializes with both agents.
 2. Warm start correctly uses data loader and agent prefill/warm_start methods.
-3. Autonomous training episode runs for R (DQN).
-4. Autonomous training episode runs for S (SARSA).
+3. Autonomous SARSA training episode runs.
+4. SARSA evaluation runs greedily.
 5. Evaluation mode executes greedily.
 6. Checkpoint save/load round-trip works.
 7. Architecture check (training doesn't import Streamlit).
@@ -98,13 +98,13 @@ def test_orchestrator_e2e() -> None:
     assert warm_res["sarsa_warm_started"] == 2
     print("  [OK] Warm start successful (SARSA ingested the demonstration)")
     
-    # 5. Train R (DQN)
+    # 5. Train SARSA
     metrics_s = orch.train_episode(env_mgr=env_mgr, seed=2, max_steps=10)
     assert metrics_s["steps"] > 0
     assert "avg_td_error" in metrics_s
     print(f"  [OK] SARSA training episode ran: {metrics_s['steps']} steps, td_error={metrics_s['avg_td_error']:.4f}")
     
-    # 7. Evaluate R (DQN)
+    # 7. Evaluate SARSA
     eval_s = orch.evaluate_episode(env_mgr=env_mgr, seed=3, max_steps=10)
     assert eval_s["steps"] > 0
     print(f"  [OK] SARSA evaluation episode ran (greedy mode): {eval_s['steps']} steps")

@@ -10,7 +10,6 @@ docs_dir = Path("docs")
 
 docs_files = [
     "architecture.md",
-    "human_training_7_day_plan.md",
     "algorithm_notes.md",
     "ui_design_system.md",
     "security_notes.md",

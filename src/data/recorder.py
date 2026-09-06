@@ -118,7 +118,7 @@ class TransitionRecorder:
 
     def start_episode(
         self,
-        vehicle: str = "R",
+        vehicle: str = "S",
         seed: Optional[int] = None,
         config_overrides: Optional[dict[str, Any]] = None,
         episode_id: Optional[str] = None,
@@ -153,8 +153,8 @@ class TransitionRecorder:
                 "Call save_episode() or discard_episode() first."
             )
 
-        if vehicle not in ("R", "S"):
-            raise ValueError(f"vehicle must be 'R' or 'S', got {vehicle!r}")
+        if vehicle != "S":
+            raise ValueError(f"vehicle must be 'S', got {vehicle!r}")
 
         if episode_id is None:
             ts = time.strftime("%Y%m%d_%H%M%S")

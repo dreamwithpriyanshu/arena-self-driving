@@ -81,7 +81,7 @@ with right:
     st.markdown("**Train and watch agents**")
     st.code(
         "python scripts/train.py --episodes 50 --warm-start\n"
-        "python scripts/play_agent.py S",
+        "python scripts/play_agent.py",
         language="powershell",
     )
     st.caption("Use the native GUI for driving and playback; return here to inspect results.")

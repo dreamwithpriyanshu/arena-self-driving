@@ -95,7 +95,7 @@ def make_driver_visible(mgr: EpisodeManager, vehicle: str, target_speed: float) 
     """Give the human vehicle an unmistakable colour and a modest size boost."""
     env = mgr._env_mgr._env.unwrapped  # Native renderer needs the controlled vehicle.
     for driver in getattr(env, "controlled_vehicles", []):
-        driver.color = (0, 229, 255) if vehicle == "R" else (255, 145, 0)
+        driver.color = (0, 229, 255)
         driver.LENGTH = 6.5
         driver.WIDTH = 2.6
         driver.speed = target_speed

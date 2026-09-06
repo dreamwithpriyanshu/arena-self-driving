@@ -1,33 +1,62 @@
-# Project Timeline
+# Project Timeline and Final Submission State
 
-## Sources and limits
+## Phase 1 — Foundation
 
-This timeline is derived primarily from `git log`: commit messages, commit dates, and changed files. Existing documentation was used only to name current components. Chat-session content was unavailable, so it is not used to infer motivations or fill gaps. All listed commits are dated 2026-09-06; no more precise date, rationale, or sequence is invented here.
+The project began with a configurable HighwayEnv highway, a shared action
+contract, compact state construction, and an environment lifecycle manager.
+JSONL episode recording, validation, loading, and a native PyGame human driver
+were then added.
 
-## 1. Foundation: environment and state
+## Phase 2 — GUI and evidence workflow
 
-`66137a5` (`project skeleton & setup`) created the base configuration, environment package, action definitions, state builder, and environment manager. Affected files included `configs/default_env.yaml`, `src/envs/actions.py`, `src/envs/highway_factory.py`, `src/envs/state_builder.py`, and `src/simulation/env_manager.py`.
+The browser simulation was replaced by native PyGame windows so keyboard input,
+rendering, and real-time controls run locally. Streamlit was retained as an
+evidence dashboard for demonstrations, metrics, and documentation.
 
-## 2. Data and human control
+## Phase 3 — Final consolidation
 
-`d1b1095` (`Database Layer`) added episode schemas, JSONL recording, validation, loading, keyboard control, and episode management in `src/data/` and `src/human/`. `830e153` (`human layer built`) extended that layer. `963cb26` (`added human native play`) added `scripts/play_human.py`; `0d1119d` records the later WASD profile update in `configs/control_bindings.json`, `src/human/control_bindings.py`, and native scripts.
+For the final submission, the experiment was simplified to one non-neural
+approach: tabular SARSA. Arrow keys are the only driving controls. The active
+trainer, native viewer, dashboard, tests, and documentation now describe that
+single workflow. The training environment was improved with responsive
+five-Hz policy decisions, moderate default traffic, reset spacing, a stronger
+collision penalty, and a small lane-change cost.
 
-## 3. R and S learners
+## Phase 4 — Deployment fixes
 
-`eeceae0` (`Agents sarsa & dqn`) added `src/agents/base.py`, `src/agents/dqn.py`, `src/agents/sarsa.py`, and algorithm notes. The commit message identifies the learners but does not state further design rationale.
+The Streamlit deployment was separated from native dependencies: Cloud installs
+dashboard-only requirements, while desktop simulation uses
+`requirements-native.txt`. Altair 6 is required because it supports the Python
+3.14 environment used by Streamlit Cloud.
 
-## 4. Training orchestration and Streamlit
+## Phase 5 — 1-D observation robustness and documentation
 
-`c13fa65` (`Training Orchestrator`) added `src/training/orchestrator.py` and connected it to the data loader. `9cbe8b9` (`Streammlit Frontend built`) added the original Streamlit pages and prior simulation/training facades. `bd498a0` added dashboard styling and `30d4b14` expanded documentation.
+State builder (`src/envs/state_builder.py`) was hardened for 1-D ego-only
+observation vectors. The builder now accepts either a full `(V, F)` matrix or a
+1-D `(F,)` ego vector and expands the latter into a zero-padded `(V, F)` matrix.
+A best-effort `build_raw_state_from_env` reconstruction helper was added for
+cases where the environment exposes vehicle objects directly.
 
-## 5. QA and optimization pass
+Tests in `tests/test_envs.py` were updated to assert the new expansion behaviour
+instead of expecting a `ValueError`. The checkpoint round-trip test was fixed to
+use a project-local directory (avoiding Windows `tmp_path` permission errors).
 
-`e2da947` and `3d6b9ce` are labelled `Qa completed` and `Final QA done`. Their changed files include environment setup, old simulation facades, runtime smoke scripts, README, requirements, and documentation. `2f95fb8` then addressed a dark-mode and SVG-loading issue in the earlier web UI.
+Stale DQN/two-agent references in docstrings and comments were cleaned out
+across `state_builder.py`, `actions.py`, and `episode_manager.py`.
 
-## 6. Streamlit-to-native-PyGame pivot
+Documentation was expanded: `docs/commands.md` (command reference),
+`docs/architecture.md`, `docs/algorithm_notes.md`, `docs/security_notes.md`,
+`docs/ui_design_system.md`, and this timeline were refreshed for submission.
+The Streamlit Documentation page (`pages/3_Docs.py`) displays all six docs.
 
-`efb0126` (`Removed web simulations to native`) removed old Streamlit simulation/live-tracking pages and simulation facades while changing `scripts/play_agent.py`, `scripts/play_human.py`, `scripts/play_multi_agent.py`, environment setup, and README. Current Streamlit files (`app.py` and `pages/`) are data/documentation views, while native PyGame scripts run driving and playback. `b40c118` and `fc36749` record follow-up native-play fixes.
+## Submission checklist
 
-## 7. Per-run history, controls, and multi-agent robustness
-
-`063735f` added persisted training history and updated DQN checkpoint loading. `88b440e` exposed training controls and timestamped per-run history; `6c91d93` added greedy mode and run metadata. `c43eeea` and `f513db1` fixed handling of ego-only multi-agent observations, with the latter updating tests and command/quickstart documentation. Recent commits `02dcad3`, `93a3d5f`, `0d1119d`, and `fc90d61` record native GUI controls, multi-agent fixes, WASD controls, and a speed fix. Their messages do not provide further reasoning beyond those descriptions.
+- Arrow-key native GUI demonstration recorder (`scripts/play_human.py`)
+- GUI SARSA playback with HUD and clickable controls (`scripts/play_agent.py`)
+- Headless reproducible SARSA trainer and Q-table checkpoint (`scripts/train.py`)
+- Validated JSONL evidence and Streamlit analytics dashboard (`app.py`, `pages/`)
+- Deployment-safe dependency split (`requirements.txt` vs `requirements-native.txt`)
+- Automated environment, data, training, and UI checks (16 tests, all passing)
+- State builder robust to both `(V, F)` and 1-D ego-only observations
+- All stale DQN/multi-agent references removed from codebase
+- Full documentation suite under `docs/` visible in the Streamlit Docs tab
