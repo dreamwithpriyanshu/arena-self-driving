@@ -133,6 +133,17 @@ def main():
                 obs_arr = np.asarray(obs_arr, dtype=np.float32)
                 if obs_arr.ndim == 2:
                     return obs_arr
+                # If a 1-D ego vector is provided, prefer reconstructing the full
+                # kinematics matrix from the environment state (best-effort). Fall
+                # back to simple zero-padding if reconstruction isn't available.
+                try:
+                    from src.envs.state_builder import build_raw_state_from_env
+                    reconstructed = build_raw_state_from_env(env)
+                    if reconstructed is not None:
+                        return reconstructed
+                except Exception:
+                    pass
+
                 # obs_arr is 1-D: infer features and expected vehicles_count from env config
                 features = obs_arr.size
                 try:

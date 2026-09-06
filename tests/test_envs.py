@@ -172,12 +172,11 @@ def test_state_builder_edge_cases() -> None:
     assert 0 <= discrete < total_discrete_states()
     print(f"  [OK] All-zero obs -> discrete state {discrete}")
 
-    # Observation with wrong shape should raise
-    try:
-        build_raw_state(np.zeros((10,)))
-        assert False, "Should have raised ValueError"
-    except ValueError:
-        print("  [OK] 1-D obs correctly raises ValueError")
+    # Observation with 1-D ego-only vector should now be accepted and expanded
+    raw = build_raw_state(np.zeros((10,)))
+    expected_dim = raw_state_dim(vehicles_count=6, features_count=10)
+    assert raw.shape == (expected_dim,)
+    print(f"  [OK] 1-D obs expanded -> raw shape {raw.shape}")
 
     print("  [OK] Edge case tests passed")
 

@@ -45,6 +45,21 @@ def _load_sarsa_bins(config_path: Optional[str | Path] = None) -> dict[str, list
 # Raw state for DQN  (continuous flat vector)
 # ---------------------------------------------------------------------------
 
+def _default_vehicles_count() -> int:
+    """Return the configured default observation vehicles_count from YAML.
+
+    Falls back to 6 if config cannot be read. This helps when expanding
+    1-D ego-only observations into a (V, F) matrix.
+    """
+    try:
+        with open(_DEFAULT_CONFIG_PATH, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        obs_cfg = cfg.get("observation", {})
+        return int(obs_cfg.get("vehicles_count", cfg.get("vehicles_count", 6)))
+    except Exception:
+        return 6
+
+
 def build_raw_state(obs: np.ndarray) -> np.ndarray:
     """
     Flatten the Kinematics observation into a 1-D float32 vector.
@@ -52,20 +67,27 @@ def build_raw_state(obs: np.ndarray) -> np.ndarray:
     Parameters
     ----------
     obs : np.ndarray
-        Shape ``(V, F)`` from HighwayEnv's Kinematics observation
-        (V = vehicles_count, F = features per vehicle).
+        Either shape ``(V, F)`` from HighwayEnv's Kinematics observation
+        (V = vehicles_count, F = features per vehicle), or a 1-D ego-only
+        feature vector of shape ``(F,)``. If a 1-D vector is provided it is
+        expanded into a ``(V, F)`` matrix by placing the ego row at index 0
+        and zero-padding neighbour rows.
 
     Returns
     -------
     np.ndarray
         1-D vector of shape ``(V * F,)`` with dtype float32.
-
-    Raises
-    ------
-    ValueError
-        If *obs* doesn't have exactly 2 dimensions.
     """
     obs = np.asarray(obs, dtype=np.float32)
+
+    # Accept both full (V, F) matrices and ego-only (F,) vectors.
+    if obs.ndim == 1:
+        features = obs.size
+        vehicles = _default_vehicles_count()
+        mat = np.zeros((vehicles, features), dtype=np.float32)
+        mat[0, :features] = obs
+        obs = mat
+
     if obs.ndim != 2:
         raise ValueError(
             f"Expected a 2-D observation (V, F), got shape {obs.shape}."
@@ -76,6 +98,88 @@ def build_raw_state(obs: np.ndarray) -> np.ndarray:
 def raw_state_dim(vehicles_count: int = 6, features_count: int = 6) -> int:
     """Return the expected dimensionality of the raw (DQN) state vector."""
     return vehicles_count * features_count
+
+
+def build_raw_state_from_env(env: Any, vehicles_count: Optional[int] = None) -> Optional[np.ndarray]:
+    """
+    Best-effort reconstruction of a full (V, F) kinematics matrix from the
+    underlying environment object. This inspects `env.unwrapped` for road and
+    vehicle objects and converts them into rows of [x, y, vx, vy, cos_h, sin_h]
+    relative to ego.
+
+    Returns None if reconstruction is not possible.
+    """
+    try:
+        unwrapped = getattr(env, "unwrapped", env)
+        road = getattr(unwrapped, "road", None)
+        if road is None:
+            return None
+
+        # Collect vehicles from the road object. `road.vehicles` may be a
+        # dict-like or list-like; handle common cases.
+        vehicles = []
+        if hasattr(road, "vehicles"):
+            vs = getattr(road, "vehicles")
+            try:
+                vehicles = list(vs)
+            except Exception:
+                # Attempt dict values
+                try:
+                    vehicles = list(vs.values())
+                except Exception:
+                    vehicles = []
+
+        if not vehicles:
+            return None
+
+        ego = getattr(unwrapped, "vehicle", vehicles[0])
+
+        # Build rows: attempt to read position, speed, and heading from each
+        # vehicle object. This is a best-effort conversion that won't raise on
+        # missing attributes.
+        rows = []
+        for v in vehicles:
+            try:
+                pos = getattr(v, "position", None)
+                if pos is None:
+                    # Some environments expose `x`, `y` directly
+                    x = float(getattr(v, "x", 0.0))
+                    y = float(getattr(v, "y", 0.0))
+                else:
+                    ego_pos = getattr(ego, "position", (0.0, 0.0))
+                    x = float(pos[0] - ego_pos[0])
+                    y = float(pos[1] - ego_pos[1])
+
+                speed = float(getattr(v, "speed", getattr(v, "velocity", 0.0)))
+                # vy not always available; attempt to use velocity vector
+                vel = getattr(v, "velocity", None)
+                if vel is None:
+                    vx = speed
+                    vy = 0.0
+                else:
+                    try:
+                        vx = float(vel[0])
+                        vy = float(vel[1])
+                    except Exception:
+                        vx = speed
+                        vy = 0.0
+
+                heading = float(getattr(v, "heading", getattr(v, "angle", 0.0)))
+                cos_h = float(np.cos(heading))
+                sin_h = float(np.sin(heading))
+
+                rows.append([x, y, vx, vy, cos_h, sin_h])
+            except Exception:
+                rows.append([0.0, 0.0, 0.0, 0.0, 1.0, 0.0])
+
+        vc = vehicles_count or _default_vehicles_count()
+        features = 6
+        mat = np.zeros((vc, features), dtype=np.float32)
+        for i, r in enumerate(rows[:vc]):
+            mat[i, :len(r)] = r
+        return mat
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +311,14 @@ def build_discrete_state(
         sarsa_bins = _load_sarsa_bins()
 
     obs = np.asarray(obs, dtype=np.float32)
+    # Support ego-only 1-D observations by expanding to (V, F)
+    if obs.ndim == 1:
+        features = obs.size
+        vehicles = _default_vehicles_count()
+        mat = np.zeros((vehicles, features), dtype=np.float32)
+        mat[0, :features] = obs
+        obs = mat
+
     if obs.ndim != 2:
         raise ValueError(
             f"Expected a 2-D observation (V, F), got shape {obs.shape}."
@@ -306,6 +418,14 @@ def build_discrete_state_with_lane(
         sarsa_bins = _load_sarsa_bins()
 
     obs = np.asarray(obs, dtype=np.float32)
+    # Support ego-only 1-D observations by expanding to (V, F)
+    if obs.ndim == 1:
+        features = obs.size
+        vehicles = _default_vehicles_count()
+        mat = np.zeros((vehicles, features), dtype=np.float32)
+        mat[0, :features] = obs
+        obs = mat
+
     if obs.ndim != 2:
         raise ValueError(
             f"Expected a 2-D observation (V, F), got shape {obs.shape}."
