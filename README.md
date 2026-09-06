@@ -48,14 +48,28 @@ git commit -m "Publish improved SARSA baseline"
 git push
 ```
 
-The tracked `published/` baseline is automatically copied into writable storage
-on a fresh install or Render instance. Existing storage is never overwritten, so a
+The tracked `published/` baseline checkpoint is automatically copied into
+writable storage on a fresh install or Render instance. Existing storage is never overwritten, so a
 user who has already trained keeps their newer checkpoint and history. Each
 published update must be committed and pushed explicitly.
 
 Browser training continues from the saved checkpoint by default, so repeated
 Render runs improve the existing model instead of resetting it. Disable the
 resume checkbox only when an intentional fresh experiment is needed.
+
+## Measuring model improvement
+
+SARSA does not have classification accuracy. Use the evaluation report in
+[`accuracy.md`](accuracy.md), which records average reward, survival steps, and
+collision-free rate for repeatable greedy evaluations:
+
+```powershell
+python scripts/evaluate_model.py --episodes 10 --steps 300
+```
+
+Run this after a meaningful training change and before publishing a new
+baseline. Compare rows using the same seeds and episode limit; higher reward,
+longer survival, and a higher collision-free rate indicate improvement.
 
 ### What appears in GitHub after Render training?
 
@@ -117,3 +131,4 @@ available directly:
 - [UI design](docs/ui_design_system.md)
 - [Free Render Web Service](docs/render_free_web_service.md)
 - [Project status](docs/timeline.md)
+- [Performance history](accuracy.md)

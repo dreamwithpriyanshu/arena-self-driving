@@ -63,3 +63,9 @@ artifacts/training_history_*.meta.json
 artifacts/test_agents/
 models/
 logs/
+
+# Published SARSA baseline is intentionally tracked for fresh installs.
+!published/checkpoints/sarsa_q_table.npy
+!published/history/
+!published/history/*.jsonl
+!published/history/*.meta.json

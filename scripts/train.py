@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.agents.sarsa import SARSAAgent
 from src.simulation.env_manager import EnvManager
 from src.training.orchestrator import TrainingOrchestrator
-from src.storage import checkpoints_dir, demonstrations_dir, artifacts_dir
+from src.storage import checkpoints_dir, demonstrations_dir, artifacts_dir, ensure_storage_dirs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -56,6 +56,7 @@ def seed_everything(seed: int) -> None:
 
 def main() -> None:
     args = build_parser().parse_args()
+    ensure_storage_dirs()
     if min(args.episodes, args.duration, args.save_freq, args.log_interval, args.simulation_frequency, args.policy_frequency) < 1:
         raise SystemExit("Episode, frequency, duration, save, and log values must be positive.")
     if args.policy_frequency > args.simulation_frequency:
