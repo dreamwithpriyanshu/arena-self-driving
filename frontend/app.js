@@ -13,14 +13,14 @@ function setStatus(text) { statusText.textContent = text; }
 function drawChart(canvas) {
   const field = canvas.dataset.field, label = canvas.dataset.label, context = canvas.getContext('2d');
   const { width, height } = canvas; context.clearRect(0, 0, width, height);
-  context.strokeStyle = '#30394a'; context.lineWidth = 1;
+  context.strokeStyle = '#d9d4ca'; context.lineWidth = 1;
   for (let y = 30; y < height - 18; y += 42) { context.beginPath(); context.moveTo(38, y); context.lineTo(width - 10, y); context.stroke(); }
   const values = metrics.map(record => Number(record[field])).filter(Number.isFinite);
-  if (!values.length) { context.fillStyle = '#a9b4c6'; context.font = '13px system-ui'; context.fillText('No recorded data', 38, height / 2); return; }
+  if (!values.length) { context.fillStyle = '#6c6b64'; context.font = '13px system-ui'; context.fillText('No recorded data', 38, height / 2); return; }
   const low = Math.min(...values, 0), high = Math.max(...values, 0), span = high - low || 1;
-  context.strokeStyle = '#00e5ff'; context.lineWidth = 3; context.beginPath();
+  context.strokeStyle = '#315f59'; context.lineWidth = 2; context.beginPath();
   values.forEach((value, index) => { const x = 38 + index * (width - 50) / Math.max(values.length - 1, 1); const y = height - 22 - (value - low) / span * (height - 54); index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.stroke();
-  context.fillStyle = '#a9b4c6'; context.font = '12px system-ui'; context.fillText(`${label}: ${high.toFixed(3)} to ${low.toFixed(3)}`, 38, 17);
+  context.fillStyle = '#6c6b64'; context.font = '12px system-ui'; context.fillText(`${label}: ${high.toFixed(3)} to ${low.toFixed(3)}`, 38, 17);
 }
 function drawCharts() { charts.forEach(drawChart); }
 function addMetric(record) { metrics.push(record); drawCharts(); const epsilon = Number(record.epsilon); const epsilonText = Number.isFinite(epsilon) ? `, ε ${epsilon.toFixed(3)}` : ''; metricsText.textContent = `${record.mode === 'evaluation' ? 'Headless evaluation' : 'Training'} · episode ${record.episode_num}: reward ${Number(record.total_reward).toFixed(2)}, steps ${record.steps}${epsilonText}`; }

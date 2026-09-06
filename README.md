@@ -28,6 +28,105 @@ python -m backend.main
 The browser frontend requires no Node.js or bundler; FastAPI serves the plain
 HTML, CSS, and JavaScript files in `frontend/`.
 
+## Human demonstrations and warm-start training
+
+Human demonstrations are optional, but they must be saved before training can
+use them. The reliable workflow is:
+
+1. Start the workbench with `python -m backend.main`, then open
+   `http://127.0.0.1:8000`, or run `python scripts/play_human.py` directly.
+2. In the PyGame window, choose the `S` model if prompted. Use the arrow keys:
+   Left/Right change lane, Up accelerates, and Down slows down.
+3. Drive until the episode ends. At the completion screen press **S** to save
+   it, **X** to discard it, or **Esc** to close without saving.
+4. Confirm a JSONL file exists under
+   `data/human_demonstrations/`. The browser also shows the saved episode and
+   transition count.
+5. Start training with **Warm-start from saved demonstrations** enabled, or run:
+
+   ```powershell
+   python scripts/train.py --episodes 100 --resume --warm-start --seed 2000
+   ```
+
+Warm-start reads the saved transitions and applies SARSA updates before the
+new autonomous episodes. It does not copy a human policy permanently and it
+does not delete or modify the demonstration files. Without `--warm-start`,
+demonstrations remain stored but are not used by that training run.
+
+## Models, checkpoints, and seeds
+
+This project has one model: a tabular SARSA Q-table stored at
+`artifacts/checkpoints/sarsa_q_table.npy`. A “new model” means a fresh
+zero-initialised Q-table for a training run, not a new model type.
+
+- `python scripts/train.py --episodes 50` starts from a fresh table in memory
+  and writes the resulting table to the checkpoint at the end. It does not
+  delete demonstrations, old history, or published files; the single runtime
+  checkpoint is replaced by the new result.
+- `python scripts/train.py --episodes 50 --resume` loads the existing
+  checkpoint and improves it.
+- `--seed` controls repeatability: it seeds Python, NumPy, and episode seeds.
+  A new seed does **not** create a new model, clear data, or reset the table.
+  With `--resume`, it simply changes the random experience used while
+  continuing the same table.
+- The browser’s **Continue from the saved SARSA checkpoint** checkbox is
+  equivalent to `--resume` and is enabled by default.
+
+### What happens when `--resume` is not used?
+
+Without `--resume`, `train.py` does **not** delete the whole project or clear
+all saved data. It creates a fresh Q-table in memory, trains it, and writes the
+result to the same runtime checkpoint path:
+
+```text
+artifacts/checkpoints/sarsa_q_table.npy
+```
+
+That means the old runtime Q-table is replaced when the new run checkpoints
+(every `--save-freq` episodes and again at shutdown). The following data are
+not deleted:
+
+- Human demonstrations in `data/human_demonstrations/`
+- Previous training history and metadata in `artifacts/`
+- The published baseline in `published/`
+- Source code and configuration
+
+The old runtime table is not recoverable from that path after it is replaced,
+so make a copy before starting a fresh experiment if you want to keep it.
+Training history records the new run separately, but it does not contain a full
+copy of the old Q-table.
+
+Safe ways to create an independent experiment:
+
+```powershell
+# Continue the current model (safest default)
+python scripts/train.py --episodes 100 --resume --seed 2000
+
+# Start fresh in a separate storage directory
+$env:ARENA_STORAGE_DIR = "D:\arena-experiment-2"
+python scripts/train.py --episodes 100 --seed 2000
+Remove-Item Env:ARENA_STORAGE_DIR
+```
+
+Changing `--seed` alone never resets, deletes, or creates a separate model.
+Use `--resume` to improve the current table, or omit it only when you
+intentionally want a fresh table.
+
+## What the scripts do
+
+| Script | Purpose | Reads | Writes or changes |
+|---|---|---|---|
+| `python -m backend.main` | Starts the local FastAPI browser workbench | Project code and docs | Starts a local server; browser actions launch the scripts below |
+| `scripts/play_human.py` | Records arrow-key driving | Environment/configuration | Saves accepted episodes to `data/human_demonstrations/*.jsonl` |
+| `scripts/train.py` | Trains or evaluates SARSA episodes | Optional checkpoint and optional demonstrations | Writes `artifacts/checkpoints/sarsa_q_table.npy` and run history/metadata |
+| `scripts/play_agent.py` | Opens interactive native agent playback | Checkpoint | May write a checkpoint only with its training/save options |
+| `scripts/evaluate_model.py` | Runs greedy, read-only evaluation | Checkpoint | Appends summary metrics to `accuracy.md`; does not train |
+| `scripts/publish_model.py` | Copies the runtime checkpoint for GitHub | Runtime checkpoint and latest history | Updates `published/`; it does not commit or push |
+
+`python -m pytest` runs the automated tests. `python -m compileall -q
+backend scripts src tests` checks that Python files compile; neither command
+trains or changes the model.
+
 ## Deploy to Render
 
 For the free plan, follow [Free Render Web Service](docs/render_free_web_service.md).

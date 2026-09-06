@@ -8,14 +8,18 @@
 </head>
 <body>
   <main>
-    <header>
-      <p class="eyebrow">SARSA WORKBENCH</p>
-      <h1>Arena <span>S</span>ARSA</h1>
-      <p>Human demonstrations, model playback, training controls, live metrics, and evidence review in one local interface.</p>
-      <nav><a href="#drive">Drive</a><a href="#train">Train</a><a href="#analytics">Analytics</a><a href="#docs">Documentation</a></nav>
+    <header class="masthead">
+      <div class="masthead-copy">
+        <p class="eyebrow">LOCAL REINFORCEMENT LEARNING LAB</p>
+        <h1>Arena <span>S</span>ARSA</h1>
+        <p class="lede">A practical workbench for collecting driving demonstrations, training a transparent policy, and reviewing its progress.</p>
+      </div>
+      <div class="masthead-note"><span class="signal"></span><span>Local session</span><small>127.0.0.1</small></div>
+      <nav aria-label="Page sections"><a href="#drive">01&nbsp; Drive</a><a href="#train">02&nbsp; Train</a><a href="#analytics">03&nbsp; Analytics</a><a href="#docs">04&nbsp; Notes</a></nav>
     </header>
 
     <section class="panel" id="drive">
+      <div class="section-kicker">01 / Input and playback</div>
       <h2>Drive and play</h2>
       <p class="muted">Locally, these actions open native PyGame windows. On Render, SARSA playback runs as headless evaluation and is saved as a run; human keyboard recording remains local-only.</p>
       <div class="action-grid">
@@ -26,7 +30,8 @@
     </section>
 
     <section class="panel controls" id="train">
-      <div class="section-heading"><div><h2>New SARSA training run</h2><p class="muted">Only bounded, validated settings are accepted.</p></div><p id="status" class="status" aria-live="polite">Ready</p></div>
+      <div class="section-kicker">02 / Experiment setup</div>
+      <div class="section-heading"><div><h2>New SARSA training run</h2><p class="muted">Tune a bounded experiment, then compare its recorded results below.</p></div><p id="status" class="status" aria-live="polite">Ready</p></div>
       <form id="training-form">
         <label>Model<select name="agent_type"><option value="S">S — SARSA</option></select></label>
         <label>Episodes<input name="episodes" type="number" min="1" max="10000" value="50"></label>
@@ -45,6 +50,7 @@
     </section>
 
     <section class="panel" id="analytics">
+      <div class="section-kicker">03 / Evidence</div>
       <div class="section-heading"><div><h2>Training analytics</h2><p id="metrics" class="muted">Start a run or choose saved evidence below.</p></div><span class="legend"><i></i> SARSA (S)</span></div>
       <div class="chart-grid">
         <article><h3>Total reward</h3><canvas data-field="total_reward" data-label="reward" width="500" height="220"></canvas></article>
@@ -56,6 +62,7 @@
     </section>
 
     <section class="panel" id="docs">
+      <div class="section-kicker">04 / Reference</div>
       <h2>Project documentation</h2><p class="muted">Architecture, SARSA, workflow, security, and backend notes are available here.</p>
       <div class="docs-layout"><div id="doc-list" role="tablist"></div><article id="doc-content" class="documentation">Loading documentation…</article></div>
     </section>

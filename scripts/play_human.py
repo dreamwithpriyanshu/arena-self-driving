@@ -17,6 +17,8 @@ from src.human.episode_manager import EpisodeManager
 
 RENDER_FPS = 60
 DECISION_HZ = 15
+MIN_TARGET_SPEED = 8.0
+MAX_TARGET_SPEED = 40.0
 ROAD_MODES = (("CITY", 12.0), ("HIGHWAY", 18.0), ("EXPRESS", 24.0))
 PYGAME_KEYS = {
     "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
@@ -59,8 +61,8 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
             (f"Initial speed: {settings['target_speed']:.1f} m/s  |  duration: {settings['duration']} s", (235, 235, 235), font),
             (f"Controls: {profile_name.upper()}  -  {profile_summary(profiles[profile_name])}", (255, 166, 77), font),
             ("Orange car = S (human)  |  Blue cars = NPC traffic", (255, 166, 77), font),
-            ("UP/DOWN NPCs  LEFT/RIGHT density  +/- speed  [/] duration  / road mode", (175, 182, 194), font),
-            ("In drive: P pause  H HUD  +/- speed  [/] duration  / road mode  ESC discard", (175, 182, 194), font),
+            ("Setup: UP/DOWN traffic  LEFT/RIGHT density  +/- speed  [/] duration  / road mode", (175, 182, 194), font),
+            ("Drive: LEFT/RIGHT lanes  UP/DOWN speed  P pause  [/] duration  H HUD  ESC discard", (175, 182, 194), font),
             ("ENTER start    ESC quit", (0, 229, 255), font),
         ]
         for index, (line, color, line_font) in enumerate(lines):
@@ -84,9 +86,9 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
                 elif event.key == pygame.K_LEFT:
                     settings["vehicles_density"] = max(0.2, round(settings["vehicles_density"] - 0.1, 1))
                 elif event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
-                    settings["target_speed"] = min(30.0, settings["target_speed"] + 1.0)
+                    settings["target_speed"] = min(MAX_TARGET_SPEED, settings["target_speed"] + 1.0)
                 elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
-                    settings["target_speed"] = max(8.0, settings["target_speed"] - 1.0)
+                    settings["target_speed"] = max(MIN_TARGET_SPEED, settings["target_speed"] - 1.0)
                 elif event.key == pygame.K_RIGHTBRACKET:
                     settings["duration"] = min(3600, settings["duration"] + 10)
                 elif event.key == pygame.K_LEFTBRACKET:
@@ -105,6 +107,24 @@ def make_driver_visible(mgr: EpisodeManager, vehicle: str, target_speed: float) 
         driver.WIDTH = 2.6
         driver.speed = target_speed
         driver.target_speed = target_speed
+
+
+def balance_viewer_traffic(mgr: EpisodeManager) -> None:
+    """Place part of the NPC traffic behind the human-controlled vehicle."""
+    env = mgr._env_mgr._env.unwrapped
+    ego = getattr(env, "vehicle", None)
+    road = getattr(env, "road", None)
+    vehicles = list(getattr(road, "vehicles", [])) if road is not None else []
+    if ego is None or road is None or len(vehicles) < 3:
+        return
+    ego_longitudinal = float(ego.position[0])
+    npcs = [vehicle for vehicle in vehicles if vehicle is not ego]
+    for index, vehicle in enumerate(npcs[len(npcs) // 2:]):
+        lane = road.network.get_lane(vehicle.lane_index)
+        longitudinal = ego_longitudinal - 24.0 - index * 22.0
+        vehicle.position = lane.position(longitudinal, 0.0)
+        vehicle.heading = lane.heading_at(longitudinal)
+        vehicle.speed = max(MIN_TARGET_SPEED, min(float(vehicle.speed), MAX_TARGET_SPEED))
 
 
 def main() -> None:
@@ -136,6 +156,7 @@ def main() -> None:
     mgr = EpisodeManager(render_mode="rgb_array", max_steps=settings["duration"] * DECISION_HZ)
     result = mgr.start(vehicle=args.vehicle, config_overrides=config)
     make_driver_visible(mgr, args.vehicle, settings["target_speed"])
+    balance_viewer_traffic(mgr)
     pygame.display.set_mode((600, 390))
 
     clock = pygame.time.Clock()
@@ -146,11 +167,15 @@ def main() -> None:
     button_bounds: dict[str, pygame.Rect] = {}
 
     def adjust_target_speed(delta: float) -> None:
-        settings["target_speed"] = min(30.0, max(8.0, settings["target_speed"] + delta))
+        settings["target_speed"] = min(MAX_TARGET_SPEED, max(MIN_TARGET_SPEED, settings["target_speed"] + delta))
         env = mgr._env_mgr._env.unwrapped
         for driver in getattr(env, "controlled_vehicles", []):
-            driver.speed = settings["target_speed"]
             driver.target_speed = settings["target_speed"]
+
+    def apply_road_mode() -> None:
+        env = mgr._env_mgr._env.unwrapped
+        for vehicle in getattr(env.road, "vehicles", []):
+            vehicle.target_speed = settings["target_speed"]
 
     def adjust_duration(delta: int) -> None:
         settings["duration"] = min(3600, max(10, settings["duration"] + delta))
@@ -164,37 +189,52 @@ def main() -> None:
         if surface is None:
             return
         width, height = surface.get_size()
-        panel_height = 94
+        panel_height = 120
         panel = pygame.Surface((width, panel_height), pygame.SRCALPHA)
         panel.fill((18, 20, 27, 232))
         surface.blit(panel, (0, height - panel_height))
         status = "PAUSED" if paused else "DRIVING"
         held_label = "+".join(action_name(action) for action in held) if held else "IDLE"
         accent = (255, 196, 77) if paused else (255, 166, 77)
-        surface.blit(hud_font.render(f"HUMAN {args.vehicle} | {status} | INPUT: {held_label}", True, accent), (12, height - 84))
+        surface.blit(hud_font.render(f"HUMAN {args.vehicle} | {status} | INPUT: {held_label}", True, accent), (12, height - 112))
+        surface.blit(hud_font.render(
+            f"ROAD {road_mode_name(settings['target_speed'])} | TARGET SPEED {settings['target_speed']:.1f} m/s",
+            True,
+            (255, 196, 77),
+        ), (12, height - 88))
         stats = (f"applied={action_name(last_applied):<10}  step={mgr.step_count:04d}  "
                  f"reward={mgr.total_reward:7.2f}  lane={result.lane_index}  "
-                 f"speed={result.speed:5.1f} m/s  target={settings['target_speed']:4.1f}  "
-                 f"duration={settings['duration']}s")
-        surface.blit(hud_font.render(stats, True, (238, 238, 240)), (12, height - 60))
-        controls = f"{profile_name.upper()} drive | P +/- speed [/] duration / | H HUD | ESC discard"
-        surface.blit(hud_font.render(controls, True, (185, 191, 204)), (12, height - 34))
-        labels = [("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD"), ("mode", road_mode_name(settings["target_speed"]))]
+                 f"speed={result.speed:5.1f} m/s  duration={settings['duration']}s")
+        surface.blit(hud_font.render(stats, True, (238, 238, 240)), (12, height - 64))
+        controls = f"{profile_name.upper()} drive | P pause  +/- speed  [/] duration  / mode | H HUD | ESC discard"
+        surface.blit(hud_font.render(controls, True, (185, 191, 204)), (12, height - 38))
+        labels = [
+            ("pause", "RESUME" if paused else "PAUSE"),
+            ("slower", "- SPD"),
+            ("faster", "+ SPD"),
+            ("shorter", "-TIME"),
+            ("longer", "+TIME"),
+            ("mode", road_mode_name(settings["target_speed"])),
+        ]
         x = width - 12
         for button_id, label in reversed(labels):
-            button = pygame.Rect(x - 76, height - 88, 70, 22)
+            button = pygame.Rect(x - 60, height - 114, 56, 22)
             pygame.draw.rect(surface, (53, 62, 76), button, border_radius=3)
             pygame.draw.rect(surface, accent, button, width=1, border_radius=3)
             text = hud_font.render(label, True, (238, 238, 240))
             surface.blit(text, text.get_rect(center=button.center))
             button_bounds[button_id] = button
-            x -= 82
+            x -= 62
+
+    cached_frame = None
 
     def render_scene() -> None:
-        frame = mgr._env_mgr._env.render()
+        nonlocal cached_frame
+        if cached_frame is None:
+            cached_frame = mgr._env_mgr._env.render()
         surface = pygame.display.get_surface()
-        if frame is not None and surface is not None:
-            image = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+        if cached_frame is not None and surface is not None:
+            image = pygame.surfarray.make_surface(cached_frame.swapaxes(0, 1))
             surface.blit(image, (0, 0))
 
     try:
@@ -223,7 +263,7 @@ def main() -> None:
                         adjust_duration(10)
                     elif event.key == pygame.K_SLASH:
                         cycle_road_mode(settings)
-                        adjust_target_speed(0.0)
+                        apply_road_mode()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if button_bounds.get("pause", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         paused = not paused
@@ -232,9 +272,13 @@ def main() -> None:
                         adjust_target_speed(-1.0)
                     elif button_bounds.get("faster", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         adjust_target_speed(1.0)
+                    elif button_bounds.get("shorter", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        adjust_duration(-10)
+                    elif button_bounds.get("longer", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        adjust_duration(10)
                     elif button_bounds.get("mode", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         cycle_road_mode(settings)
-                        adjust_target_speed(0.0)
+                        apply_road_mode()
 
             keys = pygame.key.get_pressed()
             pressed = {name for name, keycode in PYGAME_KEYS.items() if keys[keycode]}
@@ -244,6 +288,7 @@ def main() -> None:
                 while decision_elapsed >= 1 / DECISION_HZ and not mgr.is_done:
                     action = held[0] if held else Action.IDLE
                     result = mgr.act_action(action)
+                    cached_frame = None
                     last_applied = action
                     decision_elapsed -= 1 / DECISION_HZ
             render_scene()

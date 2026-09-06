@@ -14,7 +14,7 @@ python -m backend.main
 Open `http://127.0.0.1:8000`. The browser can start local human recording,
 headless training, and local agent playback.
 
-## Human demonstrations
+## Human demonstrations (required for warm-start)
 
 ```powershell
 python scripts/play_human.py
@@ -22,8 +22,9 @@ python scripts/play_human.py
 
 The orange car is the human-controlled S vehicle. Blue cars are NPC traffic.
 Use Arrow Left/Right for lane changes, Up to accelerate, and Down to slow down.
-Press `S` after an episode completes to save the demonstration, or `X` to
-discard it.
+When the episode completes, press `S` to save it, `X` to discard it, or `Esc`
+to close without saving. Saving is required: training cannot warm-start from
+an episode that was not saved.
 
 Saved demonstrations are JSONL files in:
 
@@ -32,10 +33,13 @@ data/human_demonstrations/
 ```
 
 They do not change the Q-table until a training run uses `--warm-start`.
+To verify that a recording was saved, check that a new `.jsonl` file exists in
+that directory or check the demonstration count in the browser under Drive and
+play.
 Only demonstrations whose metadata is labeled `S` are used. Legacy files from
 older model labels are ignored.
 
-## Train SARSA from scratch
+## Train SARSA from scratch (new runtime checkpoint)
 
 ```powershell
 python scripts/train.py --episodes 50 --seed 1000
@@ -43,7 +47,10 @@ python scripts/train.py --episodes 50 --seed 1000
 
 This creates a new zero-initialised Q-table in memory, runs 50 autonomous
 episodes, updates the table after every environment decision, and saves the
-checkpoint every five episodes and again at the end.
+checkpoint every five episodes and again at the end. It replaces the one
+runtime checkpoint at `artifacts/checkpoints/sarsa_q_table.npy` when complete,
+but it does not delete demonstrations, previous run history, or published
+files.
 
 For a longer run:
 
@@ -59,6 +66,41 @@ python scripts/train.py --episodes 100 --resume --seed 2000
 
 `--resume` loads the existing `sarsa_q_table.npy` before training. Without it,
 the command starts a fresh table even if a checkpoint already exists.
+
+`--seed` does not mean “make a new model.” It seeds Python, NumPy, and each
+episode (`seed`, `seed + 1`, and so on) so a run can be repeated. A different
+seed changes the experience order but does not delete data. Use `--resume` with
+the seed to continue the current table, or omit `--resume` to intentionally
+train a fresh table and replace the runtime checkpoint.
+
+### What is preserved when starting fresh?
+
+When `--resume` is omitted, `train.py` starts a zero-initialised Q-table. It
+does not remove the project data. The old runtime table at
+`artifacts/checkpoints/sarsa_q_table.npy` is replaced when checkpoints are
+saved, but these remain untouched:
+
+- `data/human_demonstrations/*.jsonl`
+- Earlier `artifacts/training_history_*.jsonl` and metadata
+- `published/`
+- Code and configuration files
+
+The old runtime Q-table is not automatically backed up. Copy it first if you
+may need to restore it:
+
+```powershell
+Copy-Item artifacts\checkpoints\sarsa_q_table.npy artifacts\checkpoints\sarsa_q_table.backup.npy
+python scripts/train.py --episodes 100 --seed 2000
+```
+
+For a completely separate experiment, use another storage root instead of
+overwriting the current runtime checkpoint:
+
+```powershell
+$env:ARENA_STORAGE_DIR = "D:\arena-experiment-2"
+python scripts/train.py --episodes 100 --seed 2000
+Remove-Item Env:ARENA_STORAGE_DIR
+```
 
 Include human demonstrations before autonomous learning:
 
@@ -116,6 +158,12 @@ In the agent viewer, `+/-` changes target speed, `/` changes road pace, `P` or
 Space pauses, `H` toggles the HUD, and `Q/E` lower or raise epsilon only when
 `--train` is active. Normal playback is greedy.
 
+The viewer places NPC traffic both ahead of and behind the ego vehicle so lane
+changes can be evaluated in both directions. The `+/-` control allows
+`8–40 m/s`, matching HighwayEnv's vehicle maximum of `40 m/s`. The configured
+reward range tops out at `30 m/s`, so speeds above 30 remain physically valid
+but do not receive additional high-speed reward.
+
 ## Publish a checkpoint to GitHub
 
 Publishing is deliberately explicit; commits do not automatically publish a
@@ -154,6 +202,21 @@ python scripts/train.py --episodes 100 --resume
 
 The published baseline is copied into a new storage directory automatically.
 Existing runtime files are not overwritten.
+
+## Script behavior summary
+
+- `backend.main` serves the browser and starts validated child processes.
+- `play_human.py` records and saves keyboard demonstrations only when `S` is
+  pressed after completion.
+- `train.py` trains SARSA, optionally loads a checkpoint with `--resume`, and
+  optionally consumes saved demonstrations with `--warm-start`.
+- `play_agent.py` displays the saved agent; its `--train --save` mode can also
+  update the checkpoint interactively.
+- `evaluate_model.py` loads the checkpoint in greedy mode and only appends
+  aggregate results to `accuracy.md`.
+- `publish_model.py` copies the runtime checkpoint and latest history into
+  `published/`; Git commands are still manual.
+- `pytest` and `compileall` validate code and do not train the model.
 
 ## What happens during one training episode?
 
