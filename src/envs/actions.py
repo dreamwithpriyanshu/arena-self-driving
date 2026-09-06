@@ -5,7 +5,7 @@ The tabular SARSA policy uses this discrete action set derived from
 HighwayEnv's DiscreteMetaAction space.
 
 This module is the single source of truth for action indices, names,
-and validation.  It knows nothing about agents, training, or Streamlit.
+and validation.  It knows nothing about agents, training, or the web UI.
 """
 
 from enum import IntEnum

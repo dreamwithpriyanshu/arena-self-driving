@@ -3,13 +3,13 @@
 Smoke test for Build Step 4a — Training Orchestration.
 
 Verifies:
-1. Orchestrator initializes with both agents.
+1. Orchestrator initializes with the SARSA agent.
 2. Warm start correctly uses data loader and agent prefill/warm_start methods.
 3. Autonomous SARSA training episode runs.
 4. SARSA evaluation runs greedily.
 5. Evaluation mode executes greedily.
 6. Checkpoint save/load round-trip works.
-7. Architecture check (training doesn't import Streamlit).
+7. Architecture check (training doesn't import presentation layers).
 """
 
 from __future__ import annotations
@@ -51,16 +51,17 @@ def test_architecture_imports() -> None:
     with open(orch_path, "r", encoding="utf-8") as f:
         tree = ast.parse(f.read())
         
+    forbidden_modules = ("fastapi", "streamlit")
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if "streamlit" in alias.name:
+                if any(module in alias.name for module in forbidden_modules):
                     raise ValueError(f"{orch_path.name} illegally imports {alias.name}")
         elif isinstance(node, ast.ImportFrom):
-            if node.module and "streamlit" in node.module:
+            if node.module and any(module in node.module for module in forbidden_modules):
                 raise ValueError(f"{orch_path.name} illegally imports from {node.module}")
 
-    print("  [OK] Training layer does not import Streamlit (UI).")
+    print("  [OK] Training layer does not import presentation layers.")
 
 
 def test_orchestrator_e2e() -> None:

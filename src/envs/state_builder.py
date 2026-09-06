@@ -6,7 +6,7 @@ Provides a continuous flat vector (retained for recorded data) and a
 discrete state index (used by the Q-table).  Both are derived from
 the same environment step observation.
 
-Layer: envs  (knows nothing about agents, training, or Streamlit)
+Layer: envs  (knows nothing about agents, training, or web UI)
 """
 
 from __future__ import annotations

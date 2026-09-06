@@ -5,7 +5,7 @@ This module is the *only* place that knows about ``gymnasium.make`` and
 HighwayEnv config dictionaries.  Everything else receives a ready-to-use
 ``gymnasium.Env`` instance through the simulation façade.
 
-Layer: envs  (knows nothing about agents, training, or Streamlit)
+Layer: envs  (knows nothing about agents, training, or web UI)
 """
 
 from __future__ import annotations

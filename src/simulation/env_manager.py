@@ -1,7 +1,7 @@
 """
 Environment Manager — the simulation façade.
 
-This is the **only** module that Streamlit pages are allowed to import
+This is the **only** simulation facade consumed by presentation layers
 from the ``src`` package.  It wraps the ``envs`` layer and exposes a
 simple interface for resetting, stepping, reading state, and closing
 the environment.

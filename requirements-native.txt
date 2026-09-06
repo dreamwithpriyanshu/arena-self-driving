@@ -1,5 +1,4 @@
-# Desktop simulation and development dependencies.
-# Install this file locally to run the PyGame driving and SARSA training tools.
+# Local simulation, FastAPI control surface, and development dependencies.
 -r requirements.txt
 highway-env>=1.9,<1.13
 gymnasium>=0.29,<1.0

@@ -78,7 +78,7 @@ class TransitionRecorder:
     Usage::
 
         rec = TransitionRecorder(base_dir="data/human_demonstrations")
-        rec.start_episode(vehicle="R", seed=42)
+        rec.start_episode(vehicle="S", seed=42)
         rec.record(transition)
         ...
         rec.save_episode()    # finalises and closes the file
@@ -129,7 +129,7 @@ class TransitionRecorder:
         Parameters
         ----------
         vehicle : str
-            ``'R'`` or ``'S'``.
+            ``'S'`` for the sole SARSA model label.
         seed : int, optional
             Environment seed for this episode.
         config_overrides : dict, optional

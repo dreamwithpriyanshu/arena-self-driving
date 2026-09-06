@@ -199,7 +199,7 @@ def get_dataset_summary(
     - ``num_episodes``: number of episode files
     - ``total_transitions``: total transitions across all episodes
     - ``total_reward``: sum of all episode rewards
-    - ``vehicles``: breakdown by vehicle (R vs S)
+    - ``vehicles``: breakdown by model label (SARSA ``S`` only)
     - ``episodes``: list of episode metadata dicts
     """
     directory = Path(directory)
@@ -211,14 +211,14 @@ def get_dataset_summary(
             "num_episodes": 0,
             "total_transitions": 0,
             "total_reward": 0.0,
-            "vehicles": {"R": 0, "S": 0},
+            "vehicles": {"S": 0},
             "episodes": [],
         }
 
     episode_metas = []
     total_transitions = 0
     total_reward = 0.0
-    vehicles = {"R": 0, "S": 0}
+    vehicles = {"S": 0}
 
     for fpath in sorted(directory.glob("*.jsonl")):
         try:

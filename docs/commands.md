@@ -12,7 +12,7 @@ pip install -r requirements-native.txt
 | `python scripts/train.py --episodes 50 --warm-start --seed 1000` | Warm-start and train SARSA. |
 | `python scripts/train.py --evaluation-only --resume --seed 2000` | Evaluate the saved Q-table without learning. |
 | `python scripts/play_agent.py` | Watch the SARSA policy in the PyGame GUI. |
-| `streamlit run app.py` | Open the read-only dashboard. |
+| `python -m backend.main` | Open the local training and analytics frontend at `http://127.0.0.1:8000` (binds to loopback only). |
 | `pytest tests/ -v` | Run the test suite. |
 
 The human GUI uses Arrow Left/Right/Up/Down for driving. `P` pauses, `H` shows

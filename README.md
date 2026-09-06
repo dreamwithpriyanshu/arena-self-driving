@@ -12,8 +12,8 @@ system.
   controls, traffic setup, and save/discard actions.
 - **Learning:** One tabular SARSA Q-table. There is no DQN, PyTorch, GPU, or
   multi-agent comparison path.
-- **Dashboard:** Streamlit reads saved evidence only. It does not start a
-  simulation, which keeps Community Cloud deployment reliable.
+- **Control surface:** FastAPI serves a local browser frontend for training
+  controls, live metrics, and saved-run analytics. It binds to loopback only.
 
 ## Install and run locally
 
@@ -31,15 +31,12 @@ python scripts/train.py --episodes 50 --warm-start --seed 1000
 # Watch the trained policy in the native GUI
 python scripts/play_agent.py
 
-# Open the evidence dashboard
-streamlit run app.py
+# Start the local training control surface, then open http://127.0.0.1:8000
+python -m backend.main
 ```
 
-## Streamlit Community Cloud
-
-Cloud installs `requirements.txt`, which deliberately contains only dashboard
-dependencies. Do not add PyGame or HighwayEnv there: the native simulator is a
-desktop workflow and needs `requirements-native.txt`.
+The browser frontend requires no Node.js or bundler; FastAPI serves the plain
+HTML, CSS, and JavaScript files in `frontend/`.
 
 ## Evidence
 

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arena SARSA Control</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">LOCAL TRAINING CONTROL</p><h1>Arena <span>S</span>ARSA</h1><p>Start, observe, stop, and review training runs.</p></header>
+    <section class="panel controls">
+      <h2>New training run</h2><p id="status" aria-live="polite">Ready</p>
+      <form id="training-form">
+        <label>Model<select name="agent_type"><option value="S">S — SARSA</option></select></label>
+        <label>Episodes<input name="episodes" type="number" min="1" max="10000" value="50"></label>
+        <label>Learning rate<input name="learning_rate" type="number" min="0.001" max="1" step="0.001" value="0.1"></label>
+        <label>Gamma<input name="gamma" type="number" min="0" max="1" step="0.01" value="0.99"></label>
+        <label>Epsilon start<input name="epsilon_start" type="number" min="0" max="1" step="0.01" value="1"></label>
+        <label>Epsilon end<input name="epsilon_end" type="number" min="0" max="1" step="0.01" value="0.05"></label>
+        <label>Epsilon decay<input name="epsilon_decay" type="number" min="0.001" max="1" step="0.001" value="0.995"></label>
+        <label>Traffic vehicles<input name="vehicles_count" type="number" min="1" max="50" value="15"></label>
+        <label>Episode duration<input name="duration" type="number" min="1" max="5000" value="300"></label>
+        <label>Seed (optional)<input name="seed" type="number" min="0" max="2147483647"></label>
+        <label class="check"><input name="warm_start" type="checkbox"> Warm-start from demonstrations</label>
+        <div><button id="start" type="submit">Start training</button><button id="stop" type="button" disabled>Stop run</button></div>
+      </form>
+    </section>
+    <section class="panel"><h2>Live reward</h2><canvas id="chart" width="900" height="280" aria-label="Total reward by episode"></canvas><p id="metrics">No metrics received.</p></section>
+    <section class="panel"><h2>Past runs</h2><p>Choose a run to load its recorded reward history.</p><div id="runs">Loading runs…</div></section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

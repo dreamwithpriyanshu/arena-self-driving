@@ -3,66 +3,42 @@
 ## Phase 1 — Foundation
 
 The project began with a configurable HighwayEnv highway, a shared action
-contract, compact state construction, and an environment lifecycle manager.
-JSONL episode recording, validation, loading, and a native PyGame human driver
-were then added.
+contract, compact state construction, an environment lifecycle manager, JSONL
+episode recording, validation, loading, and a native PyGame human driver.
 
-## Phase 2 — GUI and evidence workflow
+## Phase 2 — Native driving and SARSA
 
 The browser simulation was replaced by native PyGame windows so keyboard input,
-rendering, and real-time controls run locally. Streamlit was retained as an
-evidence dashboard for demonstrations, metrics, and documentation.
+rendering, and driving controls stay local. The project was simplified to one
+non-neural learner: tabular SARSA (`S`). Arrow keys remain the only driving
+controls. The training environment uses responsive five-Hz policy decisions,
+moderate default traffic, reset spacing, a stronger collision penalty, and a
+small lane-change cost.
 
-## Phase 3 — Final consolidation
+## Phase 3 — Robust state construction
 
-For the final submission, the experiment was simplified to one non-neural
-approach: tabular SARSA. Arrow keys are the only driving controls. The active
-trainer, native viewer, dashboard, tests, and documentation now describe that
-single workflow. The training environment was improved with responsive
-five-Hz policy decisions, moderate default traffic, reset spacing, a stronger
-collision penalty, and a small lane-change cost.
+State builder accepts either a full `(V, F)` Kinematics matrix or a 1-D ego
+vector. The 1-D case is deliberately accepted because supported environment
+configurations can emit it; the ego features are retained and neighbour rows
+are zero-padded with warnings. Callers requiring neighbour information must
+request full Kinematics observations or use the best-effort reconstruction
+helper. The reconstruction helper also warns if it has to zero-pad missing
+vehicle rows.
 
-## Phase 4 — Deployment fixes
+## Phase 4 — Local web control surface
 
-The Streamlit deployment was separated from native dependencies: Cloud installs
-dashboard-only requirements, while desktop simulation uses
-`requirements-native.txt`. Altair 6 is required because it supports the Python
-3.14 environment used by Streamlit Cloud.
-
-## Phase 5 — 1-D observation robustness and documentation
-
-State builder (`src/envs/state_builder.py`) was hardened for 1-D ego-only
-observation vectors. The builder now accepts either a full `(V, F)` matrix or a
-1-D `(F,)` ego vector and expands the latter into a zero-padded `(V, F)` matrix.
-A best-effort `build_raw_state_from_env` reconstruction helper was added for
-cases where the environment exposes vehicle objects directly.
-
-Tests in `tests/test_envs.py` were updated to assert the new expansion behaviour
-instead of expecting a `ValueError`. This relaxation is deliberate: an
-ego-only observation is a supported shape emitted by some environment
-configurations, so rejecting it would make training brittle. The expansion
-preserves the ego features and explicitly warns that neighbour rows are
-zero-padded; callers that require neighbour data must request full Kinematics
-observations or use the best-effort environment reconstruction helper. The
-checkpoint round-trip test was fixed to use a project-local directory (avoiding
-Windows `tmp_path` permission errors).
-
-Stale DQN/two-agent references in docstrings and comments were cleaned out
-across `state_builder.py`, `actions.py`, and `episode_manager.py`.
-
-Documentation was expanded: `docs/commands.md` (command reference),
-`docs/architecture.md`, `docs/algorithm_notes.md`, `docs/security_notes.md`,
-`docs/ui_design_system.md`, and this timeline were refreshed for submission.
-The Streamlit Documentation page (`pages/3_Docs.py`) displays all six docs.
+Streamlit was retired in favour of FastAPI and a lightweight browser frontend.
+The server binds to loopback by default, validates bounded SARSA
+hyperparameters, launches the existing trainer with a fixed `shell=False`
+argument list, and streams JSONL metrics to the browser. The frontend provides
+start, stop, live status, live reward charting, and saved-run analytics without
+a Node.js build chain.
 
 ## Submission checklist
 
 - Arrow-key native GUI demonstration recorder (`scripts/play_human.py`)
 - GUI SARSA playback with HUD and clickable controls (`scripts/play_agent.py`)
 - Headless reproducible SARSA trainer and Q-table checkpoint (`scripts/train.py`)
-- Validated JSONL evidence and Streamlit analytics dashboard (`app.py`, `pages/`)
-- Deployment-safe dependency split (`requirements.txt` vs `requirements-native.txt`)
-- Automated environment, data, training, and UI checks (16 tests, all passing)
-- State builder robust to both `(V, F)` and 1-D ego-only observations
-- All stale DQN/multi-agent references removed from codebase
-- Full documentation suite under `docs/` visible in the Streamlit Docs tab
+- FastAPI training control and analytics (`backend/`, `frontend/`)
+- Validated JSONL evidence and automated environment, data, training, and API checks
+- Full documentation suite under `docs/`, including backend operating notes

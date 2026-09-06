@@ -29,7 +29,7 @@ class EpisodeManager:
     Workflow::
 
         mgr = EpisodeManager()
-        mgr.start(vehicle="R", seed=42)
+        mgr.start(vehicle="S", seed=42)
 
         # In a loop driven by the UI:
         result = mgr.act("arrowup")       # human presses Up
@@ -274,7 +274,7 @@ class EpisodeManager:
 
     @property
     def vehicle(self) -> str:
-        """The vehicle being driven ('R' or 'S')."""
+        """The SARSA model label (always ``'S'``)."""
         return self._vehicle
 
     @property

@@ -2,7 +2,7 @@
 src.envs — Environment layer.
 
 Provides the HighwayEnv factory, shared action set, and state builders.
-This layer knows nothing about agents, training, or Streamlit.
+This layer knows nothing about agents, training, or the web UI.
 """
 
 from src.envs.actions import (

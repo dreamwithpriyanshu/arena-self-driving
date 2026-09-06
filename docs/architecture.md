@@ -5,7 +5,7 @@ The submission has two deliberately separate runtime surfaces.
 ```text
 Arrow-key PyGame GUI -> human recorder -> JSONL demonstrations
                                       -> SARSA trainer -> Q-table and history
-Streamlit dashboard ----------------------------------> reads evidence only
+FastAPI + browser frontend ----------------------------> starts training and reads evidence
 ```
 
 ## Modules
@@ -18,9 +18,9 @@ Streamlit dashboard ----------------------------------> reads evidence only
 - `src/training/`: headless SARSA warm start, training, evaluation, and
   checkpointing.
 
-The native GUI is intentionally separate from Streamlit. A browser-hosted
-dashboard cannot reliably provide a PyGame window on Community Cloud, while a
-read-only evidence dashboard remains fast and deployable.
+The native PyGame GUI remains responsible for driving and playback. FastAPI
+provides the local browser control surface for headless training, live metrics,
+and saved-run analytics; it does not render or control a PyGame window.
 
 ## Training contract
 
