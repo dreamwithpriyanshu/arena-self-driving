@@ -7,13 +7,6 @@
       "FASTER": ["up"],
       "SLOWER": ["down"],
       "IDLE": ["space"]
-    },
-    "wasd": {
-      "LANE_LEFT": ["a"],
-      "LANE_RIGHT": ["d"],
-      "FASTER": ["w"],
-      "SLOWER": ["s"],
-      "IDLE": ["space"]
     }
   }
 }

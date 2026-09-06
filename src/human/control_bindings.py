@@ -10,7 +10,7 @@ from src.envs.actions import Action
 
 
 CONTROL_BINDINGS_PATH = Path(__file__).resolve().parents[2] / "configs" / "control_bindings.json"
-_VALID_KEYS = {"left", "right", "up", "down", "a", "d", "w", "s", "space"}
+_VALID_KEYS = {"left", "right", "up", "down", "space"}
 
 
 def load_control_profiles(path: str | Path = CONTROL_BINDINGS_PATH) -> tuple[str, dict[str, dict[Action, tuple[str, ...]]]]:

@@ -1,7 +1,7 @@
 # Self-Driving Car Simulation MVP
 
-> A comparative study of DQN versus SARSA for autonomous highway driving,
-> trained from shared human demonstrations.
+> An arrow-key driving simulator with one transparent, tabular SARSA policy
+> trained from human demonstrations.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)]()
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)]()
@@ -9,14 +9,13 @@
 
 ## What is this?
 
-Vehicle R uses DQN, an off-policy neural-network Q-learner. Vehicle S uses
-tabular SARSA, an on-policy learner. Both receive the same human-driving data;
-the algorithm is the controlled difference.
+The project deliberately uses one non-neural approach: tabular SARSA. Its
+Q-table is fast to train, easy to inspect, and avoids a neural-network stack.
 
 The project has two runtime surfaces:
 
-- **Native PyGame** handles human data collection, gameplay, agent playback,
-  and the side-by-side DQN/SARSA view.
+- **Native PyGame** handles arrow-key data collection, gameplay, and agent
+  playback, including clickable in-window controls.
 - **Streamlit** is a data and analytics dashboard. It does not run or render
   the simulation.
 
@@ -57,7 +56,9 @@ git clone https://github.com/dreamwithpriyanshu/arena-self-driving.git
 cd arena-self-driving
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+# Native PyGame simulator and trainer:
+pip install -r requirements-native.txt
+# Streamlit dashboard deployment uses requirements.txt automatically.
 ```
 
 ## Quick start
@@ -70,25 +71,24 @@ the setup screen to use WASD instead. `P` pauses without recording a step, and
 `configs/control_bindings.json` if you need to remap either profile.
 
 ```powershell
-python scripts/play_human.py R
-python scripts/play_human.py S --vehicles-count 20 --duration 150
+python scripts/play_human.py --vehicles-count 20 --duration 150
 ```
 
 ### Train the agents
 
 ```powershell
-python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run
+python scripts/train.py --episodes 50 --warm-start --seed 1000
 ```
 
 This writes checkpoints and a timestamped training-history JSONL file under
-`artifacts/`.
+`artifacts/`. Continue from checkpoints with `--resume`; for a no-update
+comparison, use `--evaluation-only --resume --seed 2000`. Each R/S evaluation
+episode receives the same seed.
 
 ### Watch agents natively
 
 ```powershell
-python scripts/play_agent.py R
-python scripts/play_agent.py S
-python scripts/play_multi_agent.py --duration 300
+python scripts/play_agent.py
 ```
 
 Add `--train --save` to a playback script to update and persist the agents
@@ -106,6 +106,8 @@ All native modes use the same controls: `+`/`-` change target speed, `/` cycles
 City (12 m/s), Highway (18 m/s), and Express (24 m/s) pace presets, and the
 HUD exposes matching clickable controls. NPC count and density are chosen on
 the setup screen because they are created when the HighwayEnv episode resets.
+In single-agent `--train` mode, `Q`/`E` (or `-EPS`/`+EPS`) decreases/increases
+exploration epsilon without restarting the session.
 
 Before either native session starts, the GUI provides controls for NPC vehicle
 count, traffic density, target speed, and episode duration. Defaults are slower
@@ -121,7 +123,9 @@ streamlit run app.py
 ```
 
 The dashboard contains Overview, Human Demonstrations, Performance Analytics,
-and Documentation pages. It reads files only; it does not start HighwayEnv.
+and Documentation pages. Performance Analytics can overlay selected timestamped
+runs to compare R and S beyond the latest session. It reads files only; it
+does not start HighwayEnv.
 
 ### Run tests
 
@@ -152,5 +156,6 @@ missing.
 - [UI Design System](docs/ui_design_system.md)
 - [Security Notes](docs/security_notes.md)
 - [7-Day Human Training Plan](docs/human_training_7_day_plan.md)
+- [Project Timeline](docs/timeline.md)
 
 This project is for educational purposes.

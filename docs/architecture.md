@@ -78,7 +78,9 @@ separate from model checkpoints and training history.
 | `pages/3_Docs.py` | Renders project documentation |
 
 The pages import data loaders only. They do not import `envs`, `agents`,
-`training`, or `simulation`, and they never start a simulation.
+`training`, or `simulation`, and they never start a simulation. The analytics
+page can load multiple timestamped run histories; vehicle color distinguishes
+R/S and line style distinguishes runs.
 
 ## Data flow
 
@@ -86,8 +88,10 @@ The pages import data loaders only. They do not import `envs`, `agents`,
    `data/human_demonstrations/*.jsonl`.
 2. `train.py --warm-start` loads those demonstrations into DQN replay and
    SARSA updates, then trains headlessly.
-3. Training writes checkpoints to `artifacts/checkpoints/` and history to
-   `artifacts/training_history_<run>.jsonl` plus `.meta.json`.
+3. Every trainer invocation writes checkpoints (unless evaluation-only) and a
+   timestamped history pair: `artifacts/training_history_<run>.jsonl` plus
+   `.meta.json`. `--evaluation-only --resume --seed N` records a no-update,
+   fixed-seed comparison.
 4. The dashboard reads those files and plots only what exists on disk.
 5. `play_agent.py` or `play_multi_agent.py` provides native visual evaluation.
 

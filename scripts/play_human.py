@@ -21,8 +21,7 @@ ROAD_MODES = (("CITY", 12.0), ("HIGHWAY", 18.0), ("EXPRESS", 24.0))
 PYGAME_KEYS = {
     "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
     "up": pygame.K_UP, "down": pygame.K_DOWN,
-    "a": pygame.K_a, "d": pygame.K_d, "w": pygame.K_w,
-    "s": pygame.K_s, "space": pygame.K_SPACE,
+    "space": pygame.K_SPACE,
 }
 
 
@@ -51,8 +50,6 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
     title = pygame.font.SysFont("consolas", 27, bold=True)
     font = pygame.font.SysFont("consolas", 17)
     clock = pygame.time.Clock()
-    profile_names = list(profiles)
-
     while True:
         screen.fill((24, 26, 33))
         lines = [
@@ -61,7 +58,7 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
             (f"Traffic: {settings['vehicles_count']} NPCs  |  density: {settings['vehicles_density']:.1f}", (235, 235, 235), font),
             (f"Initial speed: {settings['target_speed']:.1f} m/s  |  duration: {settings['duration']} s", (235, 235, 235), font),
             (f"Controls: {profile_name.upper()}  -  {profile_summary(profiles[profile_name])}", (255, 166, 77), font),
-            ("UP/DOWN NPCs  LEFT/RIGHT density  +/- speed  / road mode  C profile", (175, 182, 194), font),
+            ("UP/DOWN NPCs  LEFT/RIGHT density  +/- speed  / road mode", (175, 182, 194), font),
             ("In drive: P pause  H HUD  +/- speed  / road mode  ESC discard", (175, 182, 194), font),
             ("ENTER start    ESC quit", (0, 229, 255), font),
         ]
@@ -77,9 +74,7 @@ def show_setup(vehicle: str, settings: dict, profiles: dict[str, dict[Action, tu
                     return True, profile_name
                 if event.key == pygame.K_ESCAPE:
                     return False, profile_name
-                if event.key == pygame.K_c:
-                    profile_name = profile_names[(profile_names.index(profile_name) + 1) % len(profile_names)]
-                elif event.key == pygame.K_UP:
+                if event.key == pygame.K_UP:
                     settings["vehicles_count"] = min(60, settings["vehicles_count"] + 1)
                 elif event.key == pygame.K_DOWN:
                     settings["vehicles_count"] = max(4, settings["vehicles_count"] - 1)
@@ -109,12 +104,13 @@ def make_driver_visible(mgr: EpisodeManager, vehicle: str, target_speed: float) 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Responsive native PyGame human-training recorder")
-    parser.add_argument("vehicle", choices=["R", "S"], help="R (DQN) or S (SARSA) demonstration")
     parser.add_argument("--vehicles-count", type=int, default=15, help="NPC vehicles (default: 15)")
     parser.add_argument("--duration", type=int, default=120, help="Episode duration in real-time seconds (default: 120)")
     parser.add_argument("--vehicles-density", type=float, default=1.0, help="Traffic density multiplier (default: 1.0)")
     parser.add_argument("--target-speed", type=float, default=18.0, help="Initial speed in m/s (default: 18.0)")
     args = parser.parse_args()
+    # One-policy application: demonstrations are always for SARSA.
+    args.vehicle = "S"
 
     settings = {"vehicles_count": args.vehicles_count, "vehicles_density": args.vehicles_density,
                 "duration": args.duration, "target_speed": args.target_speed}

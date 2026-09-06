@@ -1,182 +1,117 @@
-"""
-The Ultimate CLI Trainer.
-Headless orchestration for DQN and SARSA agents. 
-Supports batch training, warm-starting, and live metrics logging.
-"""
-import sys
+"""Headless, reproducible trainer for the single tabular SARSA policy."""
+
+from __future__ import annotations
+
 import argparse
+import json
+import random
+import sys
 import time
 from pathlib import Path
+
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
-from src.training.orchestrator import TrainingOrchestrator
 from src.simulation.env_manager import EnvManager
+from src.training.orchestrator import TrainingOrchestrator
 
-def main():
-    parser = argparse.ArgumentParser(description="Headless CLI Trainer for DQN and SARSA")
-    parser.add_argument("--agent", type=str, choices=["R", "S", "BOTH"], default="BOTH", help="Agent(s) to train: R (DQN), S (SARSA), or BOTH")
-    parser.add_argument("--episodes", type=int, default=10, help="Number of episodes to train")
-    parser.add_argument("--warm-start", action="store_true", help="Warm-start agents using human demonstrations before training")
-    parser.add_argument("--batch-size", type=int, default=64, help="DQN replay buffer batch size")
-    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
-    parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
-    parser.add_argument("--target-update-freq", type=int, default=100, help="Target network update frequency (steps)")
-    parser.add_argument("--buffer-capacity", type=int, default=10000, help="Replay buffer capacity for DQN")
-    parser.add_argument("--device", type=str, choices=["auto","cpu","cuda"], default="auto", help="Device to run training on")
-    parser.add_argument("--epsilon-start", type=float, default=1.0, help="Initial exploration rate")
-    parser.add_argument("--epsilon-decay", type=float, default=0.995, help="Exploration decay rate")
-    parser.add_argument("--vehicles-count", type=int, default=15, help="Number of NPC vehicles on the road")
-    parser.add_argument("--duration", type=int, default=120, help="Max duration of an episode in steps")
-    parser.add_argument("--save-freq", type=int, default=5, help="Save checkpoints every N episodes")
-    parser.add_argument("--log-interval", type=int, default=1, help="Print metrics every N episodes")
-    parser.add_argument("--history-mode", type=str, choices=["per-run","append"], default="per-run", help="How to persist training history: per-run timestamped file or append to single file")
-    parser.add_argument("--history-dir", type=str, default="artifacts", help="Directory to store training history files")
-    parser.add_argument("--greedy", action="store_true", help="Run training with greedy policy (epsilon=0) — useful for deterministic runs/evaluation")
-    
-    args = parser.parse_args()
 
-    # Apply greedy flag: force epsilon to 0 and disable decay
-    if args.greedy:
-        args.epsilon_start = 0.0
-        args.epsilon_decay = 1.0
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Headless trainer for the tabular SARSA driving policy")
+    parser.add_argument("--episodes", "--episode-count", dest="episodes", type=int, default=50)
+    parser.add_argument("--warm-start", action="store_true", help="Learn from recorded arrow-key demonstrations first.")
+    parser.add_argument("--resume", action="store_true", help="Load the SARSA Q-table before running.")
+    parser.add_argument("--evaluation-only", action="store_true", help="Evaluate the Q-table without updates.")
+    parser.add_argument("--seed", type=int, help="Seed Python, NumPy, and each episode.")
+    parser.add_argument("--lr", type=float, default=0.1)
+    parser.add_argument("--gamma", type=float, default=0.99)
+    parser.add_argument("--epsilon-start", type=float, default=1.0)
+    parser.add_argument("--epsilon-end", type=float, default=0.05)
+    parser.add_argument("--epsilon-decay", type=float, default=0.995)
+    parser.add_argument("--greedy", action="store_true", help="Use a zero-exploration policy.")
+    parser.add_argument("--vehicles-count", type=int, default=15)
+    parser.add_argument("--vehicles-density", type=float, default=1.0)
+    parser.add_argument("--duration", type=int, default=300, help="Maximum decisions per episode.")
+    parser.add_argument("--simulation-frequency", type=int, default=15)
+    parser.add_argument("--policy-frequency", type=int, default=5)
+    parser.add_argument("--collision-reward", type=float, default=-2.0)
+    parser.add_argument("--right-lane-reward", type=float, default=0.1)
+    parser.add_argument("--high-speed-reward", type=float, default=0.4)
+    parser.add_argument("--lane-change-reward", type=float, default=-0.05)
+    parser.add_argument("--save-freq", type=int, default=5)
+    parser.add_argument("--log-interval", type=int, default=1)
+    parser.add_argument("--checkpoint-dir", type=Path, default=Path("artifacts/checkpoints"))
+    parser.add_argument("--history-dir", type=Path, default=Path("artifacts"))
+    return parser
 
-    # Device selection (allow override)
-    if args.device == "auto":
-        device = "cuda" if __import__("torch").cuda.is_available() else "cpu"
-    else:
-        device = args.device
-    
-    print("=======================================")
-    print("      SELF-DRIVING CAR CLI TRAINER")
-    print("=======================================")
-    print(f"Agents       : {args.agent}")
-    print(f"Episodes     : {args.episodes}")
-    print(f"Warm Start   : {'Yes' if args.warm_start else 'No'}")
-    print(f"Epsilon      : {args.epsilon_start} (Decay: {args.epsilon_decay})")
-    print(f"Traffic      : {args.vehicles_count} NPCs")
-    print("=======================================")
 
-    # Initialize Agents
-    dqn = DQNAgent(
-        batch_size=args.batch_size,
-        epsilon_start=args.epsilon_start,
-        epsilon_decay=args.epsilon_decay
-    )
-    sarsa = SARSAAgent(
-        epsilon_start=args.epsilon_start,
-        epsilon_decay=args.epsilon_decay
-    )
-    
-    checkpoint_dir = Path("artifacts/checkpoints")
-    
-    # Try loading existing checkpoints
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+    if min(args.episodes, args.duration, args.save_freq, args.log_interval, args.simulation_frequency, args.policy_frequency) < 1:
+        raise SystemExit("Episode, frequency, duration, save, and log values must be positive.")
+    if args.policy_frequency > args.simulation_frequency:
+        raise SystemExit("--policy-frequency cannot exceed --simulation-frequency.")
+    if args.seed is not None:
+        seed_everything(args.seed)
+    if args.greedy or args.evaluation_only:
+        args.epsilon_start, args.epsilon_end, args.epsilon_decay = 0.0, 0.0, 1.0
+
+    agent = SARSAAgent(lr=args.lr, gamma=args.gamma, epsilon_start=args.epsilon_start,
+                       epsilon_end=args.epsilon_end, epsilon_decay=args.epsilon_decay)
+    orchestrator = TrainingOrchestrator(sarsa_agent=agent, checkpoint_dir=args.checkpoint_dir)
+    if args.resume or args.evaluation_only:
+        try:
+            orchestrator.load_checkpoints()
+            print(f"Loaded SARSA Q-table from {args.checkpoint_dir}.")
+        except FileNotFoundError as error:
+            raise SystemExit(f"Cannot resume/evaluate: {error}") from error
+    if args.warm_start and not args.evaluation_only:
+        print(f"Warm start: {orchestrator.warm_start()}")
+
+    args.history_dir.mkdir(parents=True, exist_ok=True)
+    run_id = f"{time.strftime('%Y%m%d_%H%M%S', time.localtime())}_{time.time_ns() % 1_000_000_000:09d}"
+    history_path = args.history_dir / f"training_history_{run_id}.jsonl"
+    meta_path = args.history_dir / f"training_history_{run_id}.meta.json"
+    metadata = {"run_id": run_id, "history_path": str(history_path), "created_at": time.time(),
+                "mode": "evaluation" if args.evaluation_only else "training", "algorithm": "tabular_sarsa",
+                "args": {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}}
+    meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    env_mgr = EnvManager(render_mode=None, config_overrides={
+        "vehicles_count": args.vehicles_count, "vehicles_density": args.vehicles_density,
+        "duration": args.duration, "simulation_frequency": args.simulation_frequency,
+        "policy_frequency": args.policy_frequency, "collision_reward": args.collision_reward,
+        "right_lane_reward": args.right_lane_reward, "high_speed_reward": args.high_speed_reward,
+        "lane_change_reward": args.lane_change_reward,
+    })
+    run_episode = orchestrator.evaluate_episode if args.evaluation_only else orchestrator.train_episode
+    started_at = time.time()
     try:
-        dqn.load(checkpoint_dir)
-        print("Loaded existing DQN checkpoint.")
-    except FileNotFoundError:
-        print("No existing DQN checkpoint. Starting fresh.")
-        
-    try:
-        sarsa.load(checkpoint_dir)
-        print("Loaded existing SARSA checkpoint.")
-    except FileNotFoundError:
-        print("No existing SARSA checkpoint. Starting fresh.")
-
-    # Orchestrator
-    orchestrator = TrainingOrchestrator(dqn_agent=dqn, sarsa_agent=sarsa, checkpoint_dir=checkpoint_dir)
-
-    # Warm Start
-    if args.warm_start:
-        stats = orchestrator.warm_start()
-        print(f"\nWarm-Start Complete:")
-        print(f"  Transitions Loaded  : {stats.get('loaded', 0)}")
-        print(f"  DQN Buffer Prefilled: {stats.get('r_prefilled', 0)}")
-        print(f"  SARSA Table Updates : {stats.get('s_warm_started', 0)}")
-
-    # Prepare training history file according to the requested mode
-    history_dir = Path(args.history_dir)
-    history_dir.mkdir(parents=True, exist_ok=True)
-    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-    if args.history_mode == "per-run":
-        run_id = ts
-        history_path = history_dir / f"training_history_{run_id}.jsonl"
-    else:
-        # append to a single canonical history file for backward compatibility
-        # still create a per-run metadata file so runs are identifiable
-        run_id = ts
-        history_path = history_dir / "training_history.jsonl"
-
-    # Persist run metadata alongside the history file for observability
-    try:
-        import json
-        meta_path = history_dir / f"training_history_{run_id}.meta.json"
-        meta = {
-            "run_id": run_id,
-            "history_mode": args.history_mode,
-            "history_path": str(history_path),
-            "args": {k: v for k, v in vars(args).items()},
-            "created_at": time.time(),
-        }
-        with meta_path.open("w", encoding="utf-8") as mh:
-            json.dump(meta, mh, indent=2)
-    except Exception as e:
-        print(f"[!] Warning: failed to write run metadata: {e}")
-
-    # Environment
-    config_overrides = {
-        "vehicles_count": args.vehicles_count,
-        "duration": args.duration,
-    }
-    env_mgr = EnvManager(render_mode="rgb_array", config_overrides=config_overrides)
-    
-    agents_to_train = ["R", "S"] if args.agent == "BOTH" else [args.agent]
-    
-    print("\nStarting Autonomous Training...")
-    start_time = time.time()
-    
-    try:
-        for ep in range(1, args.episodes + 1):
-            print(f"\n--- Episode {ep}/{args.episodes} ---")
-            
-            for vehicle in agents_to_train:
-                print(f"Training Agent {vehicle}...", end="", flush=True)
-                
-                metrics = orchestrator.train_episode(
-                    vehicle=vehicle,
-                    env_mgr=env_mgr,
-                    max_steps=args.duration
-                )
-                
-                print(f" Done! (Reward: {metrics['total_reward']:+.2f}, Steps: {metrics['steps']})")
-                print(f"  Details: Epsilon={metrics.get('epsilon', 0):.3f} | Crashed: {metrics['terminated']}")
-
-                # Persist per-episode metrics to a newline-delimited JSON file so the
-                # Streamlit dashboard can reflect training progress after the run.
-                try:
-                    import json
-                    record = {"episode_num": ep, "vehicle": vehicle, **metrics, "timestamp": time.time()}
-                    with history_path.open("a", encoding="utf-8") as fh:
-                        fh.write(json.dumps(record) + "\n")
-                except Exception as e:
-                    print(f"[!] Warning: failed to write training history: {e}")
-                
-            if ep % args.save_freq == 0:
-                orchestrator.save_checkpoints()
-                print(f"[!] Saved Checkpoints at Episode {ep}")
-                
-    except KeyboardInterrupt:
-        print("\n\nTraining interrupted by user!")
+        with history_path.open("x", encoding="utf-8") as history_file:
+            for episode_number in range(1, args.episodes + 1):
+                episode_seed = None if args.seed is None else args.seed + episode_number - 1
+                metrics = run_episode(env_mgr=env_mgr, seed=episode_seed, max_steps=args.duration)
+                record = {"run_id": run_id, "episode_num": episode_number, "episode_seed": episode_seed,
+                          "mode": metadata["mode"], "timestamp": time.time(), **metrics}
+                history_file.write(json.dumps(record) + "\n")
+                history_file.flush()
+                if episode_number % args.log_interval == 0:
+                    print(f"SARSA episode {episode_number}/{args.episodes}: reward={metrics['total_reward']:+.2f}, steps={metrics['steps']}")
+                if not args.evaluation_only and episode_number % args.save_freq == 0:
+                    orchestrator.save_checkpoints()
     finally:
         env_mgr.close()
-        orchestrator.save_checkpoints()
-        
-    end_time = time.time()
-    print(f"\n=======================================")
-    print(f"Training Finished! Total Time: {(end_time - start_time):.2f}s")
-    print(f"Checkpoints saved to: {checkpoint_dir}")
-    print("=======================================")
+        if not args.evaluation_only:
+            orchestrator.save_checkpoints()
+    print(f"{metadata['mode'].title()} finished in {time.time() - started_at:.2f}s.")
+    print(f"History: {history_path}\nMetadata: {meta_path}\nCheckpoint: {args.checkpoint_dir / 'sarsa_q_table.npy'}")
 
 
 if __name__ == "__main__":

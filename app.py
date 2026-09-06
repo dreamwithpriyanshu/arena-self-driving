@@ -8,7 +8,7 @@ from src.data.loader import get_dataset_summary
 
 st.set_page_config(
     page_title="Arena Self-Driving — Overview",
-    page_icon="R",
+    page_icon="A",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -44,12 +44,11 @@ def configure_history_sidebar() -> None:
 configure_history_sidebar()
 
 st.title("Arena Self-Driving")
-st.caption("Overview · shared human demonstrations · DQN versus SARSA")
+st.caption("Overview · arrow-key demonstrations · tabular SARSA")
 st.markdown(
     """
-This is the evidence desk for the experiment. It reads demonstrations and
-training history from disk; driving, training, and agent playback happen in
-native PyGame or headless CLI sessions.
+This dashboard reads evidence from disk. Driving and agent playback happen in
+the native PyGame GUI; batch training stays headless so it remains fast.
 """
 )
 
@@ -73,19 +72,19 @@ left, right = st.columns(2)
 with left:
     st.markdown("**Collect demonstrations**")
     st.code(
-        "python scripts/play_human.py R\npython scripts/play_human.py S",
+        "python scripts/play_human.py",
         language="powershell",
     )
-    st.caption("Arrow keys drive the selected vehicle. ENTER starts; ESC discards the current run.")
+    st.caption("Arrow keys are the only driving controls. ENTER starts; ESC discards the current run.")
 
 with right:
     st.markdown("**Train and watch agents**")
     st.code(
-        "python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run\n"
-        "python scripts/play_multi_agent.py",
+        "python scripts/train.py --episodes 50 --warm-start\n"
+        "python scripts/play_agent.py S",
         language="powershell",
     )
-    st.caption("Use the native windows for gameplay; return here to inspect the resulting files.")
+    st.caption("Use the native GUI for driving and playback; return here to inspect results.")
 
 st.markdown(
     """

@@ -58,12 +58,12 @@ def test_keyboard_controller() -> None:
 
 
 def test_control_profiles() -> None:
-    _header("Test 1b: Configurable Control Profiles")
+    _header("Test 1b: Arrow Control Profile")
     default_profile, profiles = load_control_profiles()
     assert default_profile == "arrows"
+    assert set(profiles) == {"arrows"}
     assert active_actions(profiles["arrows"], {"up", "left"}) == [Action.LANE_LEFT, Action.FASTER]
-    assert active_actions(profiles["wasd"], {"w", "s"}) == [Action.FASTER, Action.SLOWER]
-    print("  [OK] Arrow and WASD profiles resolve held actions correctly")
+    print("  [OK] Arrow controls resolve held actions correctly")
 
 
 def test_episode_manager_and_recorder() -> None:

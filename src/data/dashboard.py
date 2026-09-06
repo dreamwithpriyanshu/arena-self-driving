@@ -8,16 +8,13 @@ from typing import Any
 
 
 def history_files(directory: str | Path = "artifacts") -> list[Path]:
-    """Return timestamped and legacy training-history files newest first."""
+    """Return timestamped training-history files newest first."""
     root = Path(directory)
     files = sorted(
         root.glob("training_history_*.jsonl"),
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     )
-    legacy = root / "training_history.jsonl"
-    if legacy.exists() and legacy not in files:
-        files.append(legacy)
     return files
 
 
@@ -25,6 +22,15 @@ def load_history(path: str | Path) -> list[dict[str, Any]]:
     """Load newline-delimited training records."""
     with Path(path).open("r", encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
+
+
+def load_histories(paths: list[Path]) -> list[dict[str, Any]]:
+    """Load records from multiple timestamped runs with a stable run label."""
+    records: list[dict[str, Any]] = []
+    for path in paths:
+        for record in load_history(path):
+            records.append({"run": path.stem.removeprefix("training_history_"), **record})
+    return records
 
 
 def load_latest_history(directory: str | Path = "artifacts") -> tuple[list[dict[str, Any]], str]:

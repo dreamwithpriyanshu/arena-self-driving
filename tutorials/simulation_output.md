@@ -30,6 +30,10 @@ instruction screen that identifies the algorithm and whether the run is greedy
 evaluation or exploratory training. The agent then acts every environment step
 until the duration, collision, or window close ends the episode.
 
+When launched with `--train`, single-agent playback exposes exploration in the
+HUD. Use `Q`/`E` or the `-EPS`/`+EPS` buttons to lower/raise epsilon by 0.05;
+the control has no effect in greedy evaluation mode.
+
 `python scripts/play_multi_agent.py` runs DQN and SARSA together using two
 controlled vehicles. This is the visual comparison mode; the Performance
 Analytics page is the historical comparison mode.
@@ -37,6 +41,9 @@ Analytics page is the historical comparison mode.
 The multi-agent window includes a live telemetry HUD with step progress,
 current action, cumulative reward, lane, speed, crash/timeout state, and
 training status for R and S. Its controls are:
+
+`+`/`-` adjust target speed and `/` cycles City, Highway, and Express presets;
+the HUD provides matching clickable controls.
 
 - `SPACE` — pause or resume the episode
 - `H` — hide or show the telemetry HUD

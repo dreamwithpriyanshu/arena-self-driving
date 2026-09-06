@@ -1,12 +1,10 @@
 """
 src.agents — Reinforcement Learning Agents.
 
-Provides the R (DQN) and S (SARSA) agents. Both implement the BaseAgent
-interface. They are completely independent and do not import each other.
+Provides the single tabular SARSA policy used by the application.
 """
 
 from src.agents.base import BaseAgent
-from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
 
-__all__ = ["BaseAgent", "DQNAgent", "SARSAAgent"]
+__all__ = ["BaseAgent", "SARSAAgent"]

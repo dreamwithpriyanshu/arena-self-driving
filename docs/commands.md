@@ -35,7 +35,7 @@ Commands
 - Headless training (recommended):
 
   ```bash
-  python scripts/train.py --agent BOTH --episodes 100 --warm-start --history-mode per-run
+  python scripts/train.py --agent BOTH --episodes 100 --warm-start --seed 1000
   ```
 
 Run metadata example (created alongside each per-run history file):
@@ -43,7 +43,7 @@ Run metadata example (created alongside each per-run history file):
 ```json
 {
   "run_id": "20260906_145000",
-  "history_mode": "per-run",
+  "mode": "training",
   "history_path": "artifacts/training_history_20260906_145000.jsonl",
   "args": {
     "agent": "BOTH",

@@ -25,6 +25,7 @@ import highway_env  # noqa: F401 (Registers the environments with gymnasium)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "configs" / "default_env.yaml"
+_CONFIG_RENDER_MODE = object()
 
 
 def _load_yaml_config(path: Path) -> dict[str, Any]:
@@ -99,6 +100,7 @@ def _build_gym_config(cfg: dict[str, Any]) -> dict[str, Any]:
     gym_cfg["vehicles_count"] = cfg.get("vehicles_count", 15)
     gym_cfg["vehicles_density"] = cfg.get("vehicles_density", 1.0)
     gym_cfg["controlled_vehicles"] = cfg.get("controlled_vehicles", 1)
+    gym_cfg["ego_spacing"] = cfg.get("ego_spacing", 2.0)
     if cfg.get("initial_lane_id") is not None:
         gym_cfg["initial_lane_id"] = cfg["initial_lane_id"]
 
@@ -145,7 +147,7 @@ def _build_gym_config(cfg: dict[str, Any]) -> dict[str, Any]:
 
 def create_highway_env(
     config_overrides: Optional[dict[str, Any]] = None,
-    render_mode: Optional[str] = None,
+    render_mode: str | None | object = _CONFIG_RENDER_MODE,
     config_path: Optional[str | Path] = None,
 ) -> gym.Env:
     """
@@ -155,9 +157,9 @@ def create_highway_env(
     ----------
     config_overrides : dict, optional
         Key-value pairs that override the YAML defaults (merged recursively).
-    render_mode : str, optional
-        Gymnasium render mode.  If ``None``, uses the value from the config
-        file (default ``"rgb_array"``).
+    render_mode : str or None, optional
+        Gymnasium render mode. Pass ``None`` for the fast, non-rendering
+        headless environment; omitting the argument uses the config value.
     config_path : str or Path, optional
         Alternate YAML config path (defaults to ``configs/default_env.yaml``).
 
@@ -177,7 +179,7 @@ def create_highway_env(
     if config_overrides:
         base_cfg = _merge_configs(base_cfg, config_overrides)
 
-    if render_mode is None:
+    if render_mode is _CONFIG_RENDER_MODE:
         render_mode = base_cfg.get("render_mode", "rgb_array")
 
     gym_cfg = _build_gym_config(base_cfg)

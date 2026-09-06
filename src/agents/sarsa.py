@@ -72,7 +72,11 @@ class SARSAAgent(BaseAgent):
             # Explore
             return random.randrange(self.num_actions)
 
-    def update(self, transition: Transition) -> dict[str, float]:
+    def update(
+        self,
+        transition: Transition,
+        next_action: int | None = None,
+    ) -> dict[str, float]:
         """
         Perform a single SARSA update:
         Q(S, A) <- Q(S, A) + lr * [R + gamma * Q(S', A') - Q(S, A)]
@@ -86,16 +90,15 @@ class SARSAAgent(BaseAgent):
         r = transition.reward
         s_next = transition.next_discrete_state
         
-        # In actual on-policy SARSA during live training, we would use the *actual* next action
-        # the agent took. However, for a Transition tuple (which doesn't store a_next), 
-        # we approximate the next action using our current policy (which makes this closer to Expected SARSA 
-        # or Q-learning depending on implementation). 
-        # To strictly do SARSA from a replay/demonstration dataset, we usually need continuous trajectories.
-        # But for MVP simplicity, we will draw a_next from the current policy here:
-        if transition.terminated:
+        if transition.terminated or transition.truncated:
             q_next = 0.0
         else:
-            a_next = self.act(None, s_next)
+            # Online training supplies the exact action that will be executed
+            # at S'.  This is the defining on-policy SARSA update.  For older
+            # demonstration files, use the current policy as a safe fallback.
+            a_next = self.act(None, s_next) if next_action is None else next_action
+            if not 0 <= a_next < self.num_actions:
+                raise ValueError(f"next_action must be in 0..{self.num_actions - 1}")
             q_next = self.q_table[s_next, a_next]
 
         # Bound checks

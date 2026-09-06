@@ -1,9 +1,9 @@
 """
 Training Orchestrator.
 
-Ties together the Environment Manager, the RL Agents (DQN & SARSA), and the Data Loader.
+Ties together the Environment Manager, the tabular SARSA agent, and the Data Loader.
 Responsible for:
-1. Loading human demonstrations and warm-starting both agents.
+1. Loading arrow-key demonstrations and warm-starting SARSA.
 2. Running autonomous training loops.
 3. Running evaluation loops.
 4. Managing unified checkpoints.
@@ -18,9 +18,8 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
-from src.data.loader import load_all_transitions
+from src.data.loader import load_all_episodes
 from src.data.schemas import Transition
 from src.simulation.env_manager import EnvManager
 
@@ -34,18 +33,16 @@ class TrainingOrchestrator:
 
     def __init__(
         self,
-        dqn_agent: DQNAgent,
         sarsa_agent: SARSAAgent,
         checkpoint_dir: str | Path = "artifacts/checkpoints",
     ) -> None:
-        self.dqn = dqn_agent
         self.sarsa = sarsa_agent
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def warm_start(self, data_dir: str | Path = "data/human_demonstrations") -> dict[str, int]:
         """
-        Load human demonstrations and feed them to both agents.
+        Load human demonstrations and warm-start SARSA from their trajectories.
 
         Returns
         -------
@@ -55,42 +52,38 @@ class TrainingOrchestrator:
         logger.info("Starting warm-start from %s", data_dir)
         
         try:
-            transitions = load_all_transitions(data_dir, validate=True, skip_invalid=True)
+            episodes = load_all_episodes(data_dir, validate=True, skip_invalid=True)
         except Exception as e:
             logger.error("Failed to load demonstrations: %s", e)
-            return {"loaded": 0, "r_prefilled": 0, "s_warm_started": 0}
+            return {"loaded": 0, "sarsa_warm_started": 0}
 
-        if not transitions:
+        if not episodes:
             logger.warning("No valid transitions found for warm start.")
-            return {"loaded": 0, "r_prefilled": 0, "s_warm_started": 0}
+            return {"loaded": 0, "sarsa_warm_started": 0}
 
-        # DQN uses all transitions for its replay buffer
-        self.dqn.prefill_buffer(transitions)
-        
-        # SARSA iterates through all transitions and performs on-policy updates
-        self.sarsa.warm_start(transitions)
+        transitions = [transition for _metadata, episode in episodes for transition in episode]
+        for _metadata, episode in episodes:
+            for index, transition in enumerate(episode):
+                next_action = episode[index + 1].action if index + 1 < len(episode) else None
+                self.sarsa.update(transition, next_action=next_action)
 
         return {
             "loaded": len(transitions),
-            "r_prefilled": len(transitions),
-            "s_warm_started": len(transitions),
+            "sarsa_warm_started": len(transitions),
         }
 
     def train_episode(
         self,
-        vehicle: str,
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
         step_callback: Optional[Any] = None,
     ) -> dict[str, Any]:
         """
-        Run one autonomous training episode for the specified vehicle.
+        Run one autonomous SARSA training episode.
 
         Parameters
         ----------
-        vehicle : str
-            'R' for DQN, 'S' for SARSA.
         env_mgr : EnvManager
             The environment manager instance to step through.
         seed : int, optional
@@ -105,35 +98,25 @@ class TrainingOrchestrator:
         dict
             Episode metrics (reward, steps, losses, etc.)
         """
-        if vehicle not in ("R", "S"):
-            raise ValueError(f"Vehicle must be 'R' or 'S', got {vehicle!r}")
-
-        agent = self.dqn if vehicle == "R" else self.sarsa
-        agent.set_eval_mode(False)
+        self.sarsa.set_eval_mode(False)
 
         result = env_mgr.reset(seed=seed)
         
-        # Metrics tracking
-        episode_loss = 0.0
         episode_td_error = 0.0
         episode_q_val = 0.0
         update_count = 0
 
         start_time = time.time()
 
+        action = self.sarsa.act(state=result.raw_state, discrete_state=result.discrete_state)
         for step in range(max_steps):
-            # 1. Select action
-            action = agent.act(state=result.raw_state, discrete_state=result.discrete_state)
 
-            # 2. Step environment
             prev_result = result
             result = env_mgr.step(action)
             
-            # 3. Enforce max steps if env didn't terminate
             if step >= max_steps - 1 and not result.terminated:
                 result.truncated = True
 
-            # 4. Create transition
             transition = Transition(
                 step=step,
                 state=prev_result.raw_state.tolist(),
@@ -148,14 +131,13 @@ class TrainingOrchestrator:
                 speed=result.speed,
             )
 
-            # 5. Agent update
-            metrics = agent.update(transition)
+            next_action = None
+            if not (result.terminated or result.truncated):
+                next_action = self.sarsa.act(state=result.raw_state, discrete_state=result.discrete_state)
+            metrics = self.sarsa.update(transition, next_action=next_action)
             
-            # Aggregate metrics
             if metrics:
                 update_count += 1
-                if "loss" in metrics:
-                    episode_loss += metrics["loss"]
                 if "td_error" in metrics:
                     episode_td_error += metrics["td_error"]
                 if "avg_q" in metrics:
@@ -167,12 +149,12 @@ class TrainingOrchestrator:
 
             if result.terminated or result.truncated:
                 break
+            action = next_action
 
         duration = time.time() - start_time
 
-        # Compile final metrics summary
         summary = {
-            "vehicle": vehicle,
+            "vehicle": "SARSA",
             "steps": env_mgr.step_count,
             "total_reward": env_mgr.total_reward,
             "terminated": result.terminated,
@@ -181,12 +163,8 @@ class TrainingOrchestrator:
         }
         
         if update_count > 0:
-            if vehicle == "R":
-                summary["avg_loss"] = episode_loss / update_count
-                summary["epsilon"] = self.dqn.epsilon
-            else:
-                summary["avg_td_error"] = episode_td_error / update_count
-                summary["epsilon"] = self.sarsa.epsilon
+            summary["avg_td_error"] = episode_td_error / update_count
+            summary["epsilon"] = self.sarsa.epsilon
             summary["avg_q"] = episode_q_val / update_count
 
         return summary
@@ -195,7 +173,6 @@ class TrainingOrchestrator:
 
     def evaluate_episode(
         self,
-        vehicle: str,
         env_mgr: EnvManager,
         seed: Optional[int] = None,
         max_steps: int = 1000,
@@ -204,17 +181,13 @@ class TrainingOrchestrator:
         """
         Run one autonomous evaluation episode (greedy policy, no learning).
         """
-        if vehicle not in ("R", "S"):
-            raise ValueError(f"Vehicle must be 'R' or 'S', got {vehicle!r}")
-
-        agent = self.dqn if vehicle == "R" else self.sarsa
-        agent.set_eval_mode(True)
+        self.sarsa.set_eval_mode(True)
 
         result = env_mgr.reset(seed=seed)
         start_time = time.time()
 
         for step in range(max_steps):
-            action = agent.act(state=result.raw_state, discrete_state=result.discrete_state)
+            action = self.sarsa.act(state=result.raw_state, discrete_state=result.discrete_state)
             result = env_mgr.step(action)
             
             if step >= max_steps - 1 and not result.terminated:
@@ -229,7 +202,7 @@ class TrainingOrchestrator:
         duration = time.time() - start_time
 
         return {
-            "vehicle": vehicle,
+            "vehicle": "SARSA",
             "steps": env_mgr.step_count,
             "total_reward": env_mgr.total_reward,
             "terminated": result.terminated,
@@ -238,13 +211,11 @@ class TrainingOrchestrator:
         }
 
     def save_checkpoints(self) -> None:
-        """Save both agents to the configured checkpoint directory."""
+        """Save the SARSA Q-table to the configured checkpoint directory."""
         logger.info("Saving checkpoints to %s", self.checkpoint_dir)
-        self.dqn.save(self.checkpoint_dir)
         self.sarsa.save(self.checkpoint_dir)
 
     def load_checkpoints(self) -> None:
-        """Load both agents from the configured checkpoint directory."""
+        """Load the SARSA Q-table from the configured checkpoint directory."""
         logger.info("Loading checkpoints from %s", self.checkpoint_dir)
-        self.dqn.load(self.checkpoint_dir)
         self.sarsa.load(self.checkpoint_dir)

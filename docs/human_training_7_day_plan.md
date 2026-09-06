@@ -2,6 +2,23 @@
 
 ## Purpose
 
+Human driving and visual evaluation happen in native PyGame: record with
+`scripts/play_human.py`, inspect an individual policy with
+`scripts/play_agent.py`, and inspect R and S together with
+`scripts/play_multi_agent.py`. Streamlit is an evidence dashboard only; do
+not use old Simulation or Live Tracking pages to drive or evaluate episodes.
+
+Use the headless trainer for the reproducible, fixed-seed comparison:
+
+```powershell
+python scripts/train.py --agent BOTH --episodes 100 --warm-start --seed 1000
+python scripts/train.py --agent BOTH --episodes 10 --evaluation-only --resume --seed 2000
+```
+
+The first command trains from the shared human dataset and writes a timestamped
+run. The second evaluates both checkpoints without updates, using the same
+ordered seed for R and S at each episode number.
+
 The coding and application development should be completed **before this 7-day period**. The seven days below are for **human-driven training and refinement of the two learning vehicles**.
 
 The human drives inside HighwayEnv. Every driving step becomes a training example containing the current state, the human action, the reward and the next state.
@@ -11,10 +28,9 @@ The same human-generated dataset is used to train both vehicles:
 - **R → DQN**: human transitions are loaded into the replay buffer and used to update the neural network.
 - **S → SARSA**: human trajectories are replayed using the observed next human action for the SARSA update.
 
-The current repository provides native recording, headless training, native
-playback, and Streamlit history inspection. Automated fixed-seed evaluation
-reports are not currently implemented, so the comparison steps below should be
-treated as a measurement plan rather than existing CLI output.
+The repository provides native recording, headless training, native playback,
+and Streamlit history inspection. Fixed-seed evaluation uses
+`scripts/train.py --evaluation-only --resume` and writes a separate run history.
 
 After the human session for a day, both agents can run autonomous episodes to continue learning. Keep the human dataset and autonomous data stored separately.
 
@@ -36,7 +52,8 @@ Implement DQN for R and tabular SARSA for S. Both must accept the human demonstr
 
 ### Build Step 4 — Joint training + Streamlit
 
-Run R and S together, add training/evaluation scripts and build the Streamlit interface.
+Run R and S with headless training/evaluation scripts and build the Streamlit
+evidence dashboard. Native PyGame owns interactive driving and playback.
 
 ### Build Step 5 — Testing + handoff
 

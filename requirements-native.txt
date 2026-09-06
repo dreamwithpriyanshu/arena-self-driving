@@ -1,0 +1,9 @@
+# Desktop simulation and development dependencies.
+# Install this file locally to run the PyGame driving and SARSA training tools.
+-r requirements.txt
+highway-env>=1.9,<1.13
+gymnasium>=0.29,<1.0
+pygame>=2.6,<3.0
+numpy>=1.24
+pyyaml>=6.0,<7.0
+pytest>=7.4,<9.0

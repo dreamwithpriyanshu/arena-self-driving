@@ -76,6 +76,7 @@ class DQNAgent(BaseAgent):
         buffer_capacity: int = 10000,
         batch_size: int = 64,
         target_update_freq: int = 100,
+        device: str | torch.device | None = None,
     ) -> None:
         self.state_dim = state_dim
         self.num_actions = NUM_ACTIONS
@@ -83,16 +84,13 @@ class DQNAgent(BaseAgent):
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
 
-        # Exploration
         self.epsilon = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
         self._eval_mode = False
 
-        # Device
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
 
-        # Networks
         self.policy_net = QNetwork(state_dim, NUM_ACTIONS, hidden_size).to(self.device)
         self.target_net = QNetwork(state_dim, NUM_ACTIONS, hidden_size).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -110,34 +108,28 @@ class DQNAgent(BaseAgent):
         if self._eval_mode or random.random() > self.epsilon:
             with torch.no_grad():
                 state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device)
-                # Add batch dimension
                 state_tensor = state_tensor.unsqueeze(0)
                 q_values = self.policy_net(state_tensor)
                 return int(torch.argmax(q_values).item())
         else:
-            # Explore
             return random.randrange(self.num_actions)
 
     def update(self, transition: Transition) -> dict[str, float]:
         """Store transition and perform one gradient step if buffer is large enough."""
         metrics: dict[str, float] = {}
         
-        # 1. Store
         self.memory.push(transition)
         self.step_count += 1
 
-        # 2. Decay epsilon
         if not self._eval_mode:
             self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
             metrics["epsilon"] = self.epsilon
 
-        # 3. Train
         if len(self.memory) < self.batch_size or self._eval_mode:
             return metrics
 
         batch = self.memory.sample(self.batch_size)
         
-        # Prepare tensors
         states = torch.tensor([t.state for t in batch], dtype=torch.float32, device=self.device)
         actions = torch.tensor([t.action for t in batch], dtype=torch.int64, device=self.device).unsqueeze(1)
         rewards = torch.tensor([t.reward for t in batch], dtype=torch.float32, device=self.device)
@@ -145,28 +137,23 @@ class DQNAgent(BaseAgent):
         # terminated=True means episode ended (Q_target = r)
         dones = torch.tensor([float(t.terminated) for t in batch], dtype=torch.float32, device=self.device)
 
-        # Compute current Q values: Q(s, a)
         q_values = self.policy_net(states).gather(1, actions).squeeze(1)
 
-        # Compute next Q values from target net: max_a Q_target(s', a)
         with torch.no_grad():
             next_q_values = self.target_net(next_states).max(1)[0]
             
-        # Target = r + gamma * max_a Q_target(s', a) * (1 - done)
         target_q_values = rewards + self.gamma * next_q_values * (1.0 - dones)
 
         loss = self.loss_fn(q_values, target_q_values)
 
         self.optimizer.zero_grad()
         loss.backward()
-        # Gradient clipping for stability
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=1.0)
         self.optimizer.step()
 
         metrics["loss"] = loss.item()
         metrics["avg_q"] = q_values.mean().item()
 
-        # 4. Update Target Network
         if self.step_count % self.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
 
@@ -191,7 +178,6 @@ class DQNAgent(BaseAgent):
     def save(self, directory: str | Path) -> None:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
-        # Use weights_only=True per security guidelines
         model_path = directory / "dqn_policy.pt"
         torch.save(self.policy_net.state_dict(), model_path)
         logger.info("DQNAgent saved to %s", model_path)
@@ -202,9 +188,7 @@ class DQNAgent(BaseAgent):
         if not model_path.exists():
             raise FileNotFoundError(f"DQN weights not found: {model_path}")
         
-        # Load state dict safely mapping to the configured device.
-        # torch.load does not accept a `weights_only` keyword; remove it.
-        state_dict = torch.load(model_path, map_location=self.device)
+        state_dict = torch.load(model_path, map_location=self.device, weights_only=True)
         self.policy_net.load_state_dict(state_dict)
         self.target_net.load_state_dict(state_dict)
         logger.info("DQNAgent loaded from %s", model_path)

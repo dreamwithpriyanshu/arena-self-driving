@@ -31,7 +31,6 @@ if sys.platform == "win32":
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
 from src.simulation.env_manager import EnvManager
 from src.training.orchestrator import TrainingOrchestrator
@@ -79,18 +78,16 @@ def test_orchestrator_e2e() -> None:
     # 2. Generate a dummy human demonstration
     print("  Generating dummy human demonstration for warm-start...")
     human_mgr = EpisodeManager(base_dir=test_data_dir, render_mode="rgb_array")
-    human_mgr.start(vehicle="R", seed=42)
+    human_mgr.start(vehicle="S", seed=42)
     human_mgr.act("arrowup")
     human_mgr.act("arrowleft")
     human_mgr.save()
     
     # 3. Initialize Orchestrator
-    dqn = DQNAgent(batch_size=2)
     sarsa = SARSAAgent()
     env_mgr = EnvManager(render_mode="rgb_array")
     
     orch = TrainingOrchestrator(
-        dqn_agent=dqn,
         sarsa_agent=sarsa,
         checkpoint_dir=test_checkpoint_dir
     )
@@ -98,36 +95,28 @@ def test_orchestrator_e2e() -> None:
     # 4. Warm Start
     warm_res = orch.warm_start(data_dir=test_data_dir)
     assert warm_res["loaded"] == 2
-    assert len(dqn.memory) == 2
-    print("  [OK] Warm start successful (DQN and SARSA ingested demo)")
+    assert warm_res["sarsa_warm_started"] == 2
+    print("  [OK] Warm start successful (SARSA ingested the demonstration)")
     
     # 5. Train R (DQN)
-    metrics_r = orch.train_episode(vehicle="R", env_mgr=env_mgr, seed=1, max_steps=10)
-    assert metrics_r["steps"] > 0
-    assert "avg_loss" in metrics_r
-    print(f"  [OK] R (DQN) training episode ran: {metrics_r['steps']} steps, loss={metrics_r['avg_loss']:.4f}")
-    
-    # 6. Train S (SARSA)
-    metrics_s = orch.train_episode(vehicle="S", env_mgr=env_mgr, seed=2, max_steps=10)
+    metrics_s = orch.train_episode(env_mgr=env_mgr, seed=2, max_steps=10)
     assert metrics_s["steps"] > 0
     assert "avg_td_error" in metrics_s
-    print(f"  [OK] S (SARSA) training episode ran: {metrics_s['steps']} steps, td_error={metrics_s['avg_td_error']:.4f}")
+    print(f"  [OK] SARSA training episode ran: {metrics_s['steps']} steps, td_error={metrics_s['avg_td_error']:.4f}")
     
     # 7. Evaluate R (DQN)
-    eval_r = orch.evaluate_episode(vehicle="R", env_mgr=env_mgr, seed=3, max_steps=10)
-    assert eval_r["steps"] > 0
-    print(f"  [OK] R (DQN) evaluation episode ran (greedy mode): {eval_r['steps']} steps")
+    eval_s = orch.evaluate_episode(env_mgr=env_mgr, seed=3, max_steps=10)
+    assert eval_s["steps"] > 0
+    print(f"  [OK] SARSA evaluation episode ran (greedy mode): {eval_s['steps']} steps")
     
     # 8. Checkpoints
     orch.save_checkpoints()
-    assert (test_checkpoint_dir / "dqn_policy.pt").exists()
     assert (test_checkpoint_dir / "sarsa_q_table.npy").exists()
     print("  [OK] Checkpoints saved to disk")
     
     # Wipe and load
-    dqn_new = DQNAgent()
     sarsa_new = SARSAAgent()
-    orch_new = TrainingOrchestrator(dqn_agent=dqn_new, sarsa_agent=sarsa_new, checkpoint_dir=test_checkpoint_dir)
+    orch_new = TrainingOrchestrator(sarsa_agent=sarsa_new, checkpoint_dir=test_checkpoint_dir)
     
     orch_new.load_checkpoints()
     print("  [OK] Checkpoints loaded successfully")

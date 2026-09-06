@@ -183,7 +183,7 @@ Key options (full set supported, shown with defaults):
 - `--agent {R,S,BOTH}` (default: BOTH)
   - Which agent(s) to train: R = DQN, S = SARSA, BOTH = both sequentially
 
-- `--episodes N` (default: 10)
+- `--episodes N` / `--episode-count N` (default: 10)
   - Number of episodes to run
 
 - `--warm-start` (flag)
@@ -193,7 +193,7 @@ Key options (full set supported, shown with defaults):
   - DQN replay batch size for each optimization step
 
 - `--lr FLOAT` (default: 1e-3)
-  - Learning rate for DQN optimizer (Adam)
+  - Learning rate for DQN (Adam) and SARSA updates
 
 - `--gamma FLOAT` (default: 0.99)
   - Discount factor for future rewards
@@ -209,6 +209,9 @@ Key options (full set supported, shown with defaults):
 
 - `--epsilon-start FLOAT` (default: 1.0)
   - Initial exploration rate (epsilon)
+
+- `--epsilon-end FLOAT` (default: 0.05)
+  - Minimum exploration rate during training
 
 - `--epsilon-decay FLOAT` (default: 0.995)
   - Multiplicative decay applied to epsilon after each step
@@ -231,9 +234,20 @@ Key options (full set supported, shown with defaults):
 - `--log-interval N` (default: 1)
   - Print metrics every N episodes
 
-- `--history-mode {per-run,append}` (default: per-run)
-  - `per-run`: create a timestamped `artifacts/training_history_<ts>.jsonl` per run and a companion `*.meta.json` with CLI args
-  - `append`: append episode records to `artifacts/training_history.jsonl` (legacy mode). Even in append mode a per-run meta file is written.
+- `--resume` (flag)
+  - Load checkpoints before training.
+
+- `--evaluation-only` (flag)
+  - Load checkpoints, run greedy evaluation, and write history without updates.
+
+- `--seed N`
+  - Seed Python, NumPy, PyTorch, and the ordered environment episodes.
+
+- `--collision-reward`, `--right-lane-reward`, `--high-speed-reward`, `--lane-change-reward`
+  - Override one reward weight for this run.
+
+- `--checkpoint-dir PATH` (default: `artifacts/checkpoints`)
+  - Directory used by `--resume` and checkpoint saving.
 
 - `--history-dir PATH` (default: artifacts)
   - Directory to store history files and metadata
@@ -243,7 +257,7 @@ Examples
 - Quick local run (per-run history):
 
   ```powershell
-  python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run
+  python scripts/train.py --agent BOTH --episodes 50 --warm-start --seed 1000
   ```
 
 - GPU run for DQN only with custom buffer and learning rate:
@@ -255,12 +269,12 @@ Examples
 - Deterministic evaluation run (greedy):
 
   ```powershell
-  python scripts/train.py --agent R --episodes 10 --greedy --history-mode per-run
+  python scripts/train.py --agent R --episodes 10 --evaluation-only --resume --seed 2000
   ```
 
 Outputs
 - Checkpoints: `artifacts/checkpoints/` (`dqn_policy.pt`, other agent artifacts)
-- Per-run history: `artifacts/training_history_<YYYYMMDD_HHMMSS>.jsonl` (newline-delimited JSON). A companion `training_history_<ts>.meta.json` contains CLI args and run metadata.
+- Per-run history: `artifacts/training_history_<timestamp>_<nanoseconds>.jsonl` (newline-delimited JSON). A matching `.meta.json` contains CLI args and run metadata.
 
 
 Advanced: Environment configuration
@@ -281,7 +295,7 @@ Troubleshooting & best practices
 - If you get a ValueError about expected a 2-D observation, either increase the `observation.vehicles_count` in the YAML or run the native scripts with `--vehicles-count` to ensure the environment returns the full `(V, F)` Kinematics matrix.
 - Use `--warm-start` to bootstrap training with human demonstrations stored under `data/human_demonstrations/`.
 - Keep the Streamlit app and training scripts in the same repo working directory to ensure `artifacts/` is shared for history and checkpoints.
-- Use `--history-mode per-run` to keep experiments isolated and reproducible (one file per run).
+- Every trainer invocation writes an isolated timestamped run file and matching metadata.
 
 ---
 

@@ -39,13 +39,17 @@ python scripts/play_human.py R --vehicles-count 30 --vehicles-density 1.5
 Warm-start from the shared demonstrations and create an isolated history file:
 
 ```powershell
-python scripts/train.py --agent BOTH --episodes 100 --warm-start --history-mode per-run
+python scripts/train.py --agent BOTH --episodes 100 --warm-start --seed 1000
 ```
 
 The trainer writes checkpoints to `artifacts/checkpoints/`, a timestamped
 `artifacts/training_history_<run>.jsonl`, and matching `.meta.json` metadata.
 Use `--device cuda` when PyTorch GPU support is available. Use `--greedy` for
-a deterministic policy run.
+a zero-exploration policy run. Add `--resume` to load existing checkpoints, or
+`--evaluation-only --resume --seed 2000` to compare both agents without
+learning on the same ordered seeds. Reward weights can be overridden per run
+with `--collision-reward`, `--right-lane-reward`, `--high-speed-reward`, and
+`--lane-change-reward`.
 
 ## 3. Watch native agent playback
 
@@ -71,6 +75,11 @@ python scripts/play_multi_agent.py --duration 300
 The native window is the only live simulation view. ESC or closing the window
 ends playback; `--save` persists updated checkpoints.
 
+During single-agent live training, Q/E (or the native -EPS/+EPS buttons)
+adjusts exploration epsilon immediately. Target speed is also adjustable in
+the native window; traffic count and density are selected before reset because
+HighwayEnv creates traffic when an episode starts.
+
 Reference capture from the native viewer:
 
 ![Native PyGame agent playback](screenshots/native_agent_playback.png)
@@ -87,8 +96,9 @@ Use the four pages as follows:
 
 - **Overview**: confirms where evidence is stored and repeats the native commands.
 - **Human Demonstrations**: counts episodes/transitions and shows metadata.
-- **Performance Analytics**: loads a selected training-history file and plots
-  reward, survival, loss, TD error, and exploration where those fields exist.
+- **Performance Analytics**: overlays selected timestamped training-history
+  runs and plots reward, survival, loss, TD error, and exploration where those
+  fields exist.
 - **Documentation**: renders the project notes.
 
 The dashboard never starts HighwayEnv and never fabricates missing results.

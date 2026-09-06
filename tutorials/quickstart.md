@@ -8,10 +8,16 @@ Short one-line recipes for common tasks.
   python scripts/play_human.py R --vehicles-count 20 --duration 150
   ```
 
-- Quick headless training run (per-run history):
+- Quick headless training run (timestamped per-run history):
 
   ```powershell
-  python scripts/train.py --agent BOTH --episodes 50 --warm-start --history-mode per-run
+  python scripts/train.py --agent BOTH --episodes 50 --warm-start --seed 1000
+  ```
+
+- Evaluate both saved checkpoints without updating them on matching seeds:
+
+  ```powershell
+  python scripts/train.py --agent BOTH --episodes 10 --evaluation-only --resume --seed 2000
   ```
 
 - Train DQN on GPU with larger buffer:

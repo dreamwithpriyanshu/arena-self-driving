@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pygame
 
-from src.agents.dqn import DQNAgent
 from src.agents.sarsa import SARSAAgent
 from src.data.schemas import Transition
 from src.envs.actions import action_name
@@ -31,22 +30,21 @@ def cycle_road_mode(settings: dict) -> None:
     settings["target_speed"] = ROAD_MODES[(current + 1) % len(ROAD_MODES)][1]
 
 
-def show_setup(vehicle: str, settings: dict, training: bool) -> bool:
+def show_setup(settings: dict, training: bool) -> bool:
     screen = pygame.display.set_mode((740, 350))
-    pygame.display.set_caption(f"Agent Viewer - Vehicle {vehicle}")
+    pygame.display.set_caption("Agent Viewer - SARSA")
     title = pygame.font.SysFont("consolas", 26, bold=True)
     font = pygame.font.SysFont("consolas", 17)
     clock = pygame.time.Clock()
-    algorithm = "DQN" if vehicle == "R" else "SARSA"
     while True:
         screen.fill((24, 26, 33))
         lines = [
-            (f"{algorithm} AUTONOMOUS VIEWER - VEHICLE {vehicle}", (0, 229, 255), title),
+            ("SARSA AUTONOMOUS VIEWER", (0, 229, 255), title),
             (f"Mode: {'LIVE TRAINING' if training else 'GREEDY EVALUATION'}", (255, 166, 77), font),
             (f"Traffic: {settings['vehicles_count']} NPCs  |  density: {settings['vehicles_density']:.1f}", (235, 235, 235), font),
             (f"Road pace: {road_mode_name(settings['target_speed'])}  |  target speed: {settings['target_speed']:.1f} m/s", (235, 235, 235), font),
             ("UP/DOWN NPCs  LEFT/RIGHT density  +/- speed  / road mode", (175, 182, 194), font),
-            ("In drive: SPACE/P pause  +/- speed  / road mode  H HUD  ESC quit", (175, 182, 194), font),
+            ("In drive: SPACE/P pause  +/- speed  Q/E epsilon  / road mode  H HUD  ESC quit", (175, 182, 194), font),
             ("ENTER start", (0, 229, 255), font),
         ]
         for index, (line, color, line_font) in enumerate(lines):
@@ -77,17 +75,16 @@ def show_setup(vehicle: str, settings: dict, training: bool) -> bool:
         clock.tick(RENDER_FPS)
 
 
-def tune_vehicle(env_mgr: EnvManager, vehicle: str, target_speed: float) -> None:
+def tune_vehicle(env_mgr: EnvManager, target_speed: float) -> None:
     env = env_mgr._env.unwrapped
     for driver in getattr(env, "controlled_vehicles", []):
-        driver.color = (0, 229, 255) if vehicle == "R" else (255, 145, 0)
+        driver.color = (0, 229, 255)
         driver.LENGTH, driver.WIDTH = 6.5, 2.6
         driver.speed, driver.target_speed = target_speed, target_speed
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Responsive native viewer for DQN or SARSA")
-    parser.add_argument("vehicle", choices=["R", "S"], help="R (DQN) or S (SARSA)")
+    parser = argparse.ArgumentParser(description="Responsive native viewer for the SARSA policy")
     parser.add_argument("--vehicles-count", type=int, default=15)
     parser.add_argument("--duration", type=int, default=120, help="Episode duration in real-time seconds")
     parser.add_argument("--vehicles-density", type=float, default=1.0)
@@ -99,18 +96,18 @@ def main() -> None:
                 "duration": args.duration, "target_speed": args.target_speed}
 
     pygame.init()
-    if not show_setup(args.vehicle, settings, args.train):
+    if not show_setup(settings, args.train):
         pygame.quit()
         return
     pygame.display.quit()
 
-    agent = DQNAgent() if args.vehicle == "R" else SARSAAgent()
+    agent = SARSAAgent()
     checkpoint_dir = Path("artifacts/checkpoints")
     try:
         agent.load(checkpoint_dir)
-        print(f"{args.vehicle} checkpoint loaded.")
+        print("SARSA checkpoint loaded.")
     except Exception as error:
-        print(f"No {args.vehicle} checkpoint found ({error}). Agent will act randomly.")
+        print(f"No SARSA checkpoint found ({error}). Agent will act randomly.")
     agent.set_eval_mode(not args.train)
 
     env_mgr = EnvManager(render_mode="human", config_overrides={
@@ -119,7 +116,7 @@ def main() -> None:
         "screen_height": 390,
     })
     result = env_mgr.reset()
-    tune_vehicle(env_mgr, args.vehicle, settings["target_speed"])
+    tune_vehicle(env_mgr, settings["target_speed"])
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 15)
     paused, show_hud, elapsed = False, True, 0.0
@@ -134,6 +131,10 @@ def main() -> None:
         for driver in getattr(env_mgr._env.unwrapped, "controlled_vehicles", []):
             driver.target_speed = settings["target_speed"]
 
+    def set_epsilon(delta: float) -> None:
+        if args.train:
+            agent.epsilon = min(1.0, max(agent.epsilon_end, agent.epsilon + delta))
+
     def draw_hud(status: str) -> None:
         button_bounds.clear()
         if not show_hud:
@@ -145,13 +146,13 @@ def main() -> None:
         panel = pygame.Surface((width, 94), pygame.SRCALPHA)
         panel.fill((18, 20, 27, 232))
         surface.blit(panel, (0, height - 94))
-        accent = (255, 196, 77) if paused else ((0, 229, 255) if args.vehicle == "R" else (255, 145, 0))
-        surface.blit(font.render(f"{args.vehicle} AUTONOMOUS | {status} | {road_mode_name(settings['target_speed'])}", True, accent), (12, height - 84))
-        metrics = f"action={action_name(int(action)):<10} step={env_mgr.step_count:04d} reward={env_mgr.total_reward:7.2f} lane={result.lane_index} speed={result.speed:5.1f} target={settings['target_speed']:4.1f}"
+        accent = (255, 196, 77) if paused else (0, 229, 255)
+        surface.blit(font.render(f"SARSA AUTONOMOUS | {status} | {road_mode_name(settings['target_speed'])}", True, accent), (12, height - 84))
+        metrics = f"action={action_name(int(action)):<10} step={env_mgr.step_count:04d} reward={env_mgr.total_reward:7.2f} lane={result.lane_index} speed={result.speed:5.1f} target={settings['target_speed']:4.1f} eps={agent.epsilon:.2f}"
         surface.blit(font.render(metrics, True, (238, 238, 240)), (12, height - 60))
-        surface.blit(font.render("click controls or SPACE/P +/- / | H HUD | ESC quit", True, (185, 191, 204)), (12, height - 34))
+        surface.blit(font.render("click controls or SPACE/P +/- Q/E epsilon / | H HUD | ESC quit", True, (185, 191, 204)), (12, height - 34))
         x = width - 12
-        for button_id, label in reversed((("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD"), ("mode", road_mode_name(settings["target_speed"])))):
+        for button_id, label in reversed((("pause", "RESUME" if paused else "PAUSE"), ("slower", "- SPD"), ("faster", "+ SPD"), ("epsilon_down", "- EPS"), ("epsilon_up", "+ EPS"), ("mode", road_mode_name(settings["target_speed"])))):
             button = pygame.Rect(x - 76, height - 88, 70, 22)
             pygame.draw.rect(surface, (53, 62, 76), button, border_radius=3)
             pygame.draw.rect(surface, accent, button, width=1, border_radius=3)
@@ -178,6 +179,10 @@ def main() -> None:
                         set_target_speed(-1.0)
                     elif event.key == pygame.K_SLASH:
                         set_target_speed(cycle=True)
+                    elif event.key == pygame.K_q:
+                        set_epsilon(-0.05)
+                    elif event.key == pygame.K_e:
+                        set_epsilon(0.05)
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if button_bounds.get("pause", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         paused, elapsed = not paused, 0.0
@@ -187,6 +192,10 @@ def main() -> None:
                         set_target_speed(1.0)
                     elif button_bounds.get("mode", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                         set_target_speed(cycle=True)
+                    elif button_bounds.get("epsilon_down", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        set_epsilon(-0.05)
+                    elif button_bounds.get("epsilon_up", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+                        set_epsilon(0.05)
             if not paused:
                 elapsed += frame_seconds
                 while elapsed >= 1 / POLICY_HZ and not (result.terminated or result.truncated):
