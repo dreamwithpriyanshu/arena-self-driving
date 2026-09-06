@@ -22,6 +22,7 @@ from src.agents.sarsa import SARSAAgent
 from src.data.loader import load_all_episodes
 from src.data.schemas import Transition
 from src.simulation.env_manager import EnvManager
+from src.storage import checkpoints_dir, demonstrations_dir
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +35,13 @@ class TrainingOrchestrator:
     def __init__(
         self,
         sarsa_agent: SARSAAgent,
-        checkpoint_dir: str | Path = "artifacts/checkpoints",
+        checkpoint_dir: str | Path = checkpoints_dir(),
     ) -> None:
         self.sarsa = sarsa_agent
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    def warm_start(self, data_dir: str | Path = "data/human_demonstrations") -> dict[str, int]:
+    def warm_start(self, data_dir: str | Path = demonstrations_dir()) -> dict[str, int]:
         """
         Load human demonstrations and warm-start SARSA from their trajectories.
 

@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.agents.sarsa import SARSAAgent
 from src.simulation.env_manager import EnvManager
 from src.training.orchestrator import TrainingOrchestrator
+from src.storage import checkpoints_dir, demonstrations_dir, artifacts_dir
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,8 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lane-change-reward", type=float, default=-0.05)
     parser.add_argument("--save-freq", type=int, default=5)
     parser.add_argument("--log-interval", type=int, default=1)
-    parser.add_argument("--checkpoint-dir", type=Path, default=Path("artifacts/checkpoints"))
-    parser.add_argument("--history-dir", type=Path, default=Path("artifacts"))
+    parser.add_argument("--data-dir", type=Path, default=demonstrations_dir())
+    parser.add_argument("--checkpoint-dir", type=Path, default=checkpoints_dir())
+    parser.add_argument("--history-dir", type=Path, default=artifacts_dir())
     return parser
 
 
@@ -73,7 +75,7 @@ def main() -> None:
         except FileNotFoundError as error:
             raise SystemExit(f"Cannot resume/evaluate: {error}") from error
     if args.warm_start and not args.evaluation_only:
-        print(f"Warm start: {orchestrator.warm_start()}")
+        print(f"Warm start: {orchestrator.warm_start(args.data_dir)}")
 
     args.history_dir.mkdir(parents=True, exist_ok=True)
     run_id = f"{time.strftime('%Y%m%d_%H%M%S', time.localtime())}_{time.time_ns() % 1_000_000_000:09d}"

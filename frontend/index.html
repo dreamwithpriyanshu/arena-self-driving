@@ -17,10 +17,10 @@
 
     <section class="panel" id="drive">
       <h2>Drive and play</h2>
-      <p class="muted">These actions open the existing native PyGame windows on this computer. The browser launches them; it does not attempt to embed a desktop window.</p>
+      <p class="muted">Locally, these actions open native PyGame windows. On Render, SARSA playback runs as headless evaluation and is saved as a run; human keyboard recording remains local-only.</p>
       <div class="action-grid">
         <article><h3>Human demonstration</h3><p>Drive with arrow keys. Saved episodes become warm-start data for SARSA.</p><button class="secondary" data-session="human">Open human drive</button></article>
-        <article><h3>SARSA playback</h3><p>Watch the saved SARSA checkpoint act in the native simulation.</p><button class="secondary" data-session="agent">Open agent play</button></article>
+        <article><h3>SARSA playback</h3><p>Locally, watch PyGame playback. On Render, run a headless evaluation with reward and survival results.</p><button class="secondary" data-session="agent">Open agent play</button></article>
       </div>
       <p id="session-status" class="status" aria-live="polite">No native window launched from this page.</p><p id="demo-summary" class="muted">Loading demonstration summary…</p>
     </section>
@@ -38,6 +38,7 @@
         <label>Traffic vehicles<input name="vehicles_count" type="number" min="1" max="50" value="15"></label>
         <label>Episode duration<input name="duration" type="number" min="1" max="5000" value="300"></label>
         <label>Seed (optional)<input name="seed" type="number" min="0" max="2147483647"></label>
+        <label class="check"><input name="resume" type="checkbox" checked> Continue from the saved SARSA checkpoint</label>
         <label class="check"><input name="warm_start" type="checkbox"> Warm-start from saved demonstrations</label>
         <div class="form-actions"><button id="start" type="submit">Start training</button><button id="stop" class="danger" type="button" disabled>Stop run</button></div>
       </form>

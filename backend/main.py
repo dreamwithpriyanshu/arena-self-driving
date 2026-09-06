@@ -21,9 +21,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.data.loader import get_dataset_summary
+from src.storage import artifacts_dir, checkpoints_dir, demonstrations_dir, ensure_storage_dirs
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+ARTIFACTS_DIR = artifacts_dir()
 RUNS_DIR = ARTIFACTS_DIR / "runs"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 DOCS_DIR = PROJECT_ROOT / "docs"
@@ -54,6 +55,7 @@ class TrainingRequest(BaseModel):
     duration: int = Field(default=300, ge=1, le=5_000)
     seed: int | None = Field(default=None, ge=0, le=2_147_483_647)
     warm_start: bool = False
+    resume: bool = True
 
     @model_validator(mode="after")
     def validate_schedule(self) -> "TrainingRequest":
@@ -126,6 +128,7 @@ class JobRegistry:
 
 registry = JobRegistry()
 app = FastAPI(title="Arena SARSA Training Control", docs_url=None, redoc_url=None)
+ensure_storage_dirs()
 
 
 class NativeSessionRegistry:
@@ -136,6 +139,32 @@ class NativeSessionRegistry:
         self._lock = threading.Lock()
 
     def start(self, mode: Literal["human", "agent"]) -> dict[str, object]:
+        if os.environ.get("RENDER") == "true" and mode == "human":
+            raise HTTPException(
+                status_code=501,
+                detail="Human keyboard demonstrations require a local PyGame window.",
+            )
+        if os.environ.get("RENDER") == "true":
+            run_id = uuid.uuid4().hex
+            history_dir = RUNS_DIR / f"evaluation-{run_id}"
+            history_dir.mkdir(parents=True, exist_ok=False)
+            command = [
+                sys.executable, str(PROJECT_ROOT / "scripts" / "train.py"),
+                "--episodes", "1", "--evaluation-only", "--resume",
+                "--history-dir", str(history_dir),
+                "--checkpoint-dir", str(checkpoints_dir()),
+                "--data-dir", str(demonstrations_dir()),
+            ]
+            try:
+                process = subprocess.Popen(
+                    command, cwd=PROJECT_ROOT, shell=False,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+            except OSError as exc:
+                history_dir.rmdir()
+                raise HTTPException(status_code=500, detail="Unable to start hosted evaluation.") from exc
+            job = registry.create(run_id, process, history_dir)
+            return {"mode": mode, "hosted": True, **job_payload(job)}
         with self._lock:
             existing = self._processes.get(mode)
             if existing and existing.poll() is None:
@@ -174,7 +203,11 @@ def training_command(request: TrainingRequest, history_dir: Path) -> list[str]:
         "--vehicles-count", str(request.vehicles_count),
         "--duration", str(request.duration),
         "--history-dir", str(history_dir),
+        "--checkpoint-dir", str(checkpoints_dir()),
+        "--data-dir", str(demonstrations_dir()),
     ]
+    if request.resume:
+        command.append("--resume")
     if request.seed is not None:
         command.extend(["--seed", str(request.seed)])
     if request.warm_start:
@@ -343,4 +376,5 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=os.environ.get("HOST", "127.0.0.1"),
+                port=int(os.environ.get("PORT", "8000")))

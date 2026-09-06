@@ -1,0 +1,26 @@
+{
+  "run_id": "20260906_180624",
+  "history_mode": "per-run",
+  "history_path": "artifacts\\training_history_20260906_180624.jsonl",
+  "args": {
+    "agent": "BOTH",
+    "episodes": 50,
+    "warm_start": true,
+    "batch_size": 64,
+    "lr": 0.001,
+    "gamma": 0.99,
+    "target_update_freq": 100,
+    "buffer_capacity": 10000,
+    "device": "auto",
+    "epsilon_start": 1.0,
+    "epsilon_decay": 0.995,
+    "vehicles_count": 15,
+    "duration": 120,
+    "save_freq": 5,
+    "log_interval": 1,
+    "history_mode": "per-run",
+    "history_dir": "artifacts",
+    "greedy": false
+  },
+  "created_at": 1788698184.7512245
+}

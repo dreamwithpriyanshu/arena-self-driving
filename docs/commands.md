@@ -30,6 +30,7 @@ Open `http://127.0.0.1:8000`, then:
 | `python scripts/play_agent.py` | Directly open the native SARSA playback viewer. |
 | `python scripts/train.py --episodes 50 --warm-start --seed 1000` | Train SARSA from demonstrations. |
 | `python scripts/train.py --evaluation-only --resume --seed 2000` | Greedily evaluate the saved Q-table without learning. |
+| `python scripts/publish_model.py` | Copy the current checkpoint and latest history into tracked `published/` files for GitHub. |
 | `pytest tests -q` | Run automated checks. |
 
 The human window uses Arrow Left/Right/Up/Down to drive. `P` pauses, `H`

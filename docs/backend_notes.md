@@ -10,6 +10,14 @@ It listens on `127.0.0.1:8000` only. Open `http://127.0.0.1:8000` in the same
 machine's browser. Do not expose this server to a network without adding
 authentication, TLS, and an authorization design for process launch requests.
 
+For Render, use the `render.yaml` Blueprint. Render is headless: the human
+PyGame endpoint returns `501`, while the agent endpoint starts a one-episode
+headless evaluation and saves its metrics as a normal run.
+
+Render training does not push files to GitHub. The persistent disk belongs to
+the Render service; publishing a checkpoint to GitHub is an explicit download,
+`publish_model.py`, commit, and push workflow.
+
 ## API contract
 
 | Endpoint | Purpose |
@@ -29,7 +37,8 @@ authentication, TLS, and an authorization design for process launch requests.
 unknown fields and validates ranges: episodes 1-10,000, learning rate `(0, 1]`,
 gamma and epsilon values `[0, 1]`, epsilon decay `(0, 1]`, vehicles 1-50,
 duration 1-5,000, and a non-negative 32-bit seed. `epsilon_end` cannot exceed
-`epsilon_start`.
+`epsilon_start`. Browser training resumes from the saved checkpoint by default;
+the request may disable this with `resume: false`.
 
 The backend builds a fixed `list[str]` for `scripts/train.py` and runs it with
 `shell=False`. It does the same for the two native PyGame launchers. Client

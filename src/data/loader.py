@@ -17,6 +17,7 @@ from typing import Optional
 
 from src.data.schemas import EpisodeMetadata, Transition
 from src.data.validator import validate_episode_file
+from src.storage import demonstrations_dir
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ def load_episode(
 # ---------------------------------------------------------------------------
 
 def load_all_episodes(
-    directory: str | Path = "data/human_demonstrations",
+    directory: str | Path = demonstrations_dir(),
     validate: bool = True,
     expected_state_dim: Optional[int] = None,
     skip_invalid: bool = True,
@@ -166,7 +167,7 @@ def load_all_episodes(
 # ---------------------------------------------------------------------------
 
 def load_all_transitions(
-    directory: str | Path = "data/human_demonstrations",
+    directory: str | Path = demonstrations_dir(),
     validate: bool = True,
     expected_state_dim: Optional[int] = None,
     skip_invalid: bool = True,
@@ -190,7 +191,7 @@ def load_all_transitions(
 
 
 def get_dataset_summary(
-    directory: str | Path = "data/human_demonstrations",
+    directory: str | Path = demonstrations_dir(),
 ) -> dict:
     """
     Return a summary of the dataset in a directory.

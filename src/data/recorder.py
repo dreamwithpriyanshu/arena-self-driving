@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.data.schemas import EpisodeMetadata, Transition
+from src.storage import data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,7 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Allowed base directories for writing (relative to project root)
-_ALLOWED_WRITE_DIRS = {
-    _PROJECT_ROOT / "data",
-    _PROJECT_ROOT / "artifacts",
-}
+_ALLOWED_WRITE_DIRS = {data_dir(), data_dir().parent / "artifacts"}
 
 
 def _is_safe_path(path: Path) -> bool:
@@ -93,7 +91,12 @@ class TransitionRecorder:
         base_dir: str | Path = "data/human_demonstrations",
         source: str = "human",
     ) -> None:
-        self._base_dir = (_PROJECT_ROOT / base_dir).resolve()
+        configured_dir = Path(base_dir)
+        self._base_dir = (
+            data_dir().parent / configured_dir
+            if not configured_dir.is_absolute()
+            else configured_dir
+        ).resolve()
         self._source = source
         self._file = None
         self._metadata: Optional[EpisodeMetadata] = None

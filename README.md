@@ -28,6 +28,55 @@ python -m backend.main
 The browser frontend requires no Node.js or bundler; FastAPI serves the plain
 HTML, CSS, and JavaScript files in `frontend/`.
 
+## Deploy to Render
+
+Use the included [`render.yaml`](render.yaml) as a Blueprint. It installs the
+Python dependencies, binds FastAPI to Render's public port, and mounts a
+persistent disk at `/var/data`. `ARENA_STORAGE_DIR=/var/data` keeps human
+demonstrations, checkpoints, and all run history across deploys and restarts.
+Persistent disks require a paid Render instance and are attached to one service
+instance; do not scale this service horizontally unless storage is moved to
+object storage or a database.
+
+Render is a headless server, so a human cannot record keyboard demonstrations
+there. The **SARSA playback** button uses a headless evaluation run instead of
+opening PyGame, and saves its metrics in run history. Training, warm-starting
+from stored demonstration files, live metrics, checkpoints, and saved history
+work through the browser API. Use the local workflow for arrow-key recording,
+then copy validated JSONL files into the mounted storage when needed.
+
+## Sharing an improved model through GitHub
+
+Training files under `artifacts/` and `data/` are intentionally ignored by Git,
+so pushing the repository alone does **not** share your learned model. To
+publish the current local checkpoint and latest history:
+
+```powershell
+python scripts/publish_model.py
+git add published
+git commit -m "Publish improved SARSA baseline"
+git push
+```
+
+The tracked `published/` baseline is automatically copied into writable storage
+on a fresh install or Render disk. Existing storage is never overwritten, so a
+user who has already trained keeps their newer checkpoint and history. Each
+published update must be committed and pushed explicitly.
+
+Browser training continues from the saved checkpoint by default, so repeated
+Render runs improve the existing model instead of resetting it. Disable the
+resume checkbox only when an intentional fresh experiment is needed.
+
+### What appears in GitHub after Render training?
+
+Nothing is pushed automatically. Render's persistent disk is separate from the
+GitHub repository, and training updates the checkpoint and history on that disk
+only. To put a trained Render model into GitHub, download the checkpoint/history
+from the service, place them under `artifacts/`, run `python
+scripts/publish_model.py`, then commit and push `published/`. Alternatively,
+keep the trained model on Render and treat GitHub as the source code/baseline
+repository.
+
 ## Browser workflow
 
 1. Open **Human demonstration** to launch the native PyGame driving window.
